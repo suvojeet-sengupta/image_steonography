@@ -40,7 +40,7 @@ fun DecodeScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    var decodedMessage by remember { mutableStateOf<String?>(null) }
+    var decodedMessage by remember { mutableStateOf<SteganographyUtils.DecodeResult?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
     val pickerLauncher = rememberLauncherForActivityResult(
@@ -170,7 +170,7 @@ fun DecodeScreen(onBack: () -> Unit) {
                                     SteganographyUtils.decodeMessage(bitmap)
                                 }
                                 
-                                decodedMessage = result ?: "No hidden message found."
+                                decodedMessage = result
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -209,29 +209,72 @@ fun DecodeScreen(onBack: () -> Unit) {
 
             // Result Section
             if (decodedMessage != null) {
-                Text(
-                    text = "Hidden Message Found:", 
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
-                )
+                val lsb = decodedMessage!!.lsbMessage
+                val dct = decodedMessage!!.dctMessage
                 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    SelectionContainer {
-                        Text(
-                            text = decodedMessage!!,
-                            modifier = Modifier.padding(24.dp),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Medium,
-                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.5
-                            ),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                if (lsb == null && dct == null) {
+                     Text(
+                        text = "No hidden messages found.", 
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                } else {
+                     Text(
+                        text = "Hidden Messages Found:", 
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+                    )
+                    
+                    if (!lsb.isNullOrEmpty()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Standard Message (High Quality)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                SelectionContainer {
+                                    Text(
+                                        text = lsb,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (!dct.isNullOrEmpty() && dct != lsb) { // Don't show twice if identical (unless verified diff needed)
+                         Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "WhatsApp Safe Message (Robust)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                SelectionContainer {
+                                    Text(
+                                        text = dct,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

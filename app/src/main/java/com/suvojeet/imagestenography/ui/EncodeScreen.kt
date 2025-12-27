@@ -164,75 +164,121 @@ fun EncodeScreen(onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Action Button
-            Button(
-                onClick = {
-                    if (selectedUri == null) {
-                        Toast.makeText(context, "Please select an image first", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (message.isBlank()) {
-                        Toast.makeText(context, "Message cannot be empty", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    
-                    isLoading = true
-                    scope.launch {
-                        try {
-                            val bitmap = withContext(Dispatchers.IO) {
-                                context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
-                                    val original = BitmapFactory.decodeStream(stream)
-                                    original.copy(Bitmap.Config.ARGB_8888, true)
-                                }
-                            }
 
-                            if (bitmap != null) {
-                                val result = withContext(Dispatchers.Default) {
-                                    SteganographyUtils.encodeMessage(bitmap, message)
+            // Action Buttons
+            if (encodedBitmap == null) {
+                Button(
+                    onClick = {
+                        if (selectedUri == null) {
+                            Toast.makeText(context, "Please select an image first", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (message.isBlank()) {
+                            Toast.makeText(context, "Message cannot be empty", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        
+                        isLoading = true
+                        scope.launch {
+                            try {
+                                val bitmap = withContext(Dispatchers.IO) {
+                                    context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
+                                        val original = BitmapFactory.decodeStream(stream)
+                                        original.copy(Bitmap.Config.ARGB_8888, true)
+                                    }
                                 }
-                                
-                                if (result != null) {
-                                    encodedBitmap = result
-                                    val savedUri = ImageUtils.saveBitmapToGallery(context, result, "Hidden_${System.currentTimeMillis()}")
+
+                                if (bitmap != null) {
+                                    val result = withContext(Dispatchers.Default) {
+                                        SteganographyUtils.encodeMessage(bitmap, message)
+                                    }
+                                    
+                                    if (result != null) {
+                                        encodedBitmap = result
+                                        Toast.makeText(context, "Encryption Complete! Download the image now.", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Message too long for this image", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = !isLoading && selectedUri != null && message.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp), 
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Encrypting...", style = MaterialTheme.typography.titleMedium)
+                    } else {
+                        Icon(Icons.Default.Lock, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Encrypt Image", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            } else {
+                Row(
+                   modifier = Modifier.fillMaxWidth(),
+                   horizontalArrangement = Arrangement.spacedBy(16.dp) 
+                ) {
+                     Button(
+                        onClick = {
+                            encodedBitmap = null
+                            message = ""
+                            selectedUri = null // Reset completely or just reset state? User logic seems to imply finishing flow.
+                            // Let's just reset result to start over or pick new image
+                        },
+                         modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors()
+                     ) {
+                         Text("Reset")
+                     }
+                     
+                     Button(
+                        onClick = {
+                            if (encodedBitmap != null) {
+                                scope.launch {
+                                    val savedUri = ImageUtils.saveBitmapToGallery(context, encodedBitmap!!, "Hidden_${System.currentTimeMillis()}")
                                     if (savedUri != null) {
-                                        Toast.makeText(context, "Image saved successfully!", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Image saved to Gallery!", Toast.LENGTH_LONG).show()
                                     } else {
                                         Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
                                     }
-                                } else {
-                                    Toast.makeText(context, "Message too long for this image", Toast.LENGTH_LONG).show()
                                 }
                             }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                        } finally {
-                            isLoading = false
-                        }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                             containerColor = MaterialTheme.colorScheme.secondary,
+                             contentColor = MaterialTheme.colorScheme.onSecondary
+                        )
+                    ) {
+                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null) // Save icon (using add photo as existing available icon)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Download", style = MaterialTheme.typography.titleMedium)
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                enabled = !isLoading && selectedUri != null && message.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp), 
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Encrypting...", style = MaterialTheme.typography.titleMedium)
-                } else {
-                    Icon(Icons.Default.Lock, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Encrypt & Save", style = MaterialTheme.typography.titleMedium)
                 }
             }
 

@@ -5,10 +5,47 @@ import android.graphics.Color
 
 object SteganographyUtils {
 
-    private const val END_MESSAGE_CONSTANT = "$!@#END" 
+
+    // Result class to hold dual decoding results
+    data class DecodeResult(
+        val lsbMessage: String?,
+        val dctMessage: String?
+    )
 
     fun encodeMessage(bitmap: Bitmap, message: String): Bitmap? {
-        // LSB implementation directly
+        // 1. First try DCT (Robust)
+        // We copy the bitmap for DCT
+        var workingBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        
+        // Try to encode with DCT. If message is too long or fails, we just ignore DCT and proceed with LSB
+        // keeping the original (or whatever state) for LSB encoding.
+        // For strict robustness, we should ideally warn, but for "Hybrid", we just do best effort.
+        val dctBitmap = DCTUtils.encodeMessage(workingBitmap, message)
+        
+        if (dctBitmap != null) {
+             workingBitmap = dctBitmap // DCT encoding successful
+        }
+
+        // 2. Then apply LSB (Standard) on the potentially DCT-modified bitmap
+        // This ensures the image has high-quality LSB message, and underlying robust DCT noise.
+        val finalBitmap = encodeLSB(workingBitmap, message)
+        
+        return finalBitmap
+    }
+
+    fun decodeMessage(bitmap: Bitmap): DecodeResult {
+        // Attempt to decode using both methods
+        val lsbResult = decodeLSB(bitmap)
+        val dctResult = DCTUtils.decodeMessage(bitmap)
+        
+        return DecodeResult(lsbResult, dctResult)
+    }
+
+    // --- LSB Implementation (Private) ---
+
+    private const val END_MESSAGE_CONSTANT = "$!@#END" 
+
+    private fun encodeLSB(bitmap: Bitmap, message: String): Bitmap? {
         val fullMessage = message + END_MESSAGE_CONSTANT
         val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         
@@ -17,7 +54,7 @@ object SteganographyUtils {
         val totalPixels = width * height
         
         if (fullMessage.length * 8 > totalPixels * 3) {
-            return null // Message too long
+            return null // Message too long for LSB
         }
 
         var messageIndex = 0
@@ -80,7 +117,7 @@ object SteganographyUtils {
         return mutableBitmap
     }
 
-    fun decodeMessage(bitmap: Bitmap): String? {
+    private fun decodeLSB(bitmap: Bitmap): String? {
         val width = bitmap.width
         val height = bitmap.height
         
