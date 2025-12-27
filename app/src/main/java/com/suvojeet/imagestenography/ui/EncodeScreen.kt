@@ -239,41 +239,69 @@ fun EncodeScreen(onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
             
+            Spacer(modifier = Modifier.height(24.dp))
+            
             // Password Protection Section
             var password by remember { mutableStateOf("") }
             var isPasswordVisible by remember { mutableStateOf(false) }
+            // Watermark
+            var isWatermarkEnabled by remember { mutableStateOf(true) }
+            val authorName = remember { 
+                context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                    .getString("author_name", "Anonymous") ?: "Anonymous"
+            }
 
             Text(
-                text = "Password Protection (Optional)", 
+                text = "Security Options", 
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
             )
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Secret Password") },
-                placeholder = { Text("Leave empty for no password") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                ),
-                trailingIcon = {
-                    val image = if (isPasswordVisible)
-                        Icons.Default.Visibility
-                    else Icons.Default.VisibilityOff
-
-                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                        Icon(imageVector = image, contentDescription = if (isPasswordVisible) "Hide Password" else "Show Password")
+            
+            Column(
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(12.dp)).padding(16.dp)
+            ) {
+                 // Password Input
+                 OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Secret Password (Optional)") },
+                    placeholder = { Text("Encrypt message") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    ),
+                    trailingIcon = {
+                        val image = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                            Icon(imageVector = image, contentDescription = if (isPasswordVisible) "Hide Password" else "Show Password")
+                        }
+                    },
+                    visualTransformation = if (isPasswordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Watermark Toggle
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { isWatermarkEnabled = !isWatermarkEnabled }
+                ) {
+                    Checkbox(
+                        checked = isWatermarkEnabled,
+                        onCheckedChange = { isWatermarkEnabled = it }
+                    )
+                    Column {
+                        Text("Add Visual Watermark", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        Text("Stamps '$authorName' on image. Survives screenshots.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                },
-                visualTransformation = if (isPasswordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password)
-            )
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -293,7 +321,7 @@ fun EncodeScreen(onBack: () -> Unit) {
                         isLoading = true
                         scope.launch {
                             try {
-                                val bitmap = withContext(Dispatchers.IO) {
+                                var bitmap = withContext(Dispatchers.IO) {
                                     context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
                                         val original = BitmapFactory.decodeStream(stream)
                                         original.copy(Bitmap.Config.ARGB_8888, true)
@@ -301,7 +329,15 @@ fun EncodeScreen(onBack: () -> Unit) {
                                 }
 
                                 if (bitmap != null) {
-                                    // Encrypt message if password provided
+                                    // 0. Apply Watermark FIRST (if enabled)
+                                    if (isWatermarkEnabled) {
+                                       val watermarked = withContext(Dispatchers.Default) {
+                                            com.suvojeet.imagestenography.utils.WatermarkUtils.applyWatermark(bitmap!!, authorName)
+                                       }
+                                       bitmap = watermarked
+                                    }
+                                    
+                                    // 1. Encrypt message if password provided
                                     val finalMessage = if (password.isNotEmpty()) {
                                         withContext(Dispatchers.Default) {
                                             com.suvojeet.imagestenography.utils.CryptoUtils.encrypt(message, password)

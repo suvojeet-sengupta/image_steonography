@@ -38,8 +38,11 @@ class MainActivity : ComponentActivity() {
 
                     when (currentScreen) {
                         Screen.Onboarding -> OnboardingScreen(
-                            onFinish = {
-                                prefs.edit().putBoolean("is_first_run", false).apply()
+                            onFinish = { name ->
+                                prefs.edit()
+                                    .putBoolean("is_first_run", false)
+                                    .putString("author_name", name)
+                                    .apply()
                                 currentScreen = Screen.Home
                             }
                         )

@@ -14,9 +14,9 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,9 +31,10 @@ import com.suvojeet.imagestenography.R
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun OnboardingScreen(onFinish: () -> Unit) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
+fun OnboardingScreen(onFinish: (String) -> Unit) {
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
+    var authorName by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -45,7 +46,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             state = pagerState,
             modifier = Modifier.weight(1f)
         ) { page ->
-            OnboardingPage(page)
+            OnboardingPage(page, authorName) { authorName = it }
         }
 
         // Indicators and Button
@@ -58,7 +59,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
         ) {
             // Indicators
             Row {
-                repeat(3) { iteration ->
+                repeat(4) { iteration ->
                     val color = if (pagerState.currentPage == iteration) 
                          MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                     
@@ -75,16 +76,19 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             // Next / Finish Button
             Button(
                 onClick = {
-                    if (pagerState.currentPage < 2) {
+                    if (pagerState.currentPage < 3) {
                         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                     } else {
-                        onFinish()
+                        if (authorName.isNotBlank()) {
+                            onFinish(authorName)
+                        } 
                     }
                 },
+                enabled = pagerState.currentPage != 3 || authorName.isNotBlank(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(if (pagerState.currentPage == 2) "Get Started" else "Next")
-                if (pagerState.currentPage < 2) {
+                Text(if (pagerState.currentPage == 3) "Get Started" else "Next")
+                if (pagerState.currentPage < 3) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(Icons.Default.NavigateNext, contentDescription = null)
                 }
@@ -94,23 +98,26 @@ fun OnboardingScreen(onFinish: () -> Unit) {
 }
 
 @Composable
-fun OnboardingPage(page: Int) {
+fun OnboardingPage(page: Int, nameValue: String, onNameChange: (String) -> Unit) {
     val title = when (page) {
         0 -> "Hide Secrets in Plain Sight"
         1 -> "WhatsApp Safe Encryption"
-        else -> "Smart Analysis Tool"
+        2 -> "Smart Analysis Tool"
+        else -> "Profile Setup"
     }
     
     val description = when (page) {
         0 -> "Use advanced steganography to hide invisible messages inside your photos. Secure, private, and cool."
         1 -> "Our 'Robust Mode' (DCT) ensures your hidden messages survive image compression on WhatsApp and Facebook."
-        else -> "Use our 'Scanner' to detect if an image contains hidden data or high-frequency noise."
+        2 -> "Use our 'Scanner' to detect if an image contains hidden data or high-frequency noise."
+        else -> "Enter your name for the Watermark feature. This will be visibly stamped on your images to prove ownership."
     }
     
     val icon = when (page) {
         0 -> Icons.Default.Lock
         1 -> Icons.Default.Security
-        else -> Icons.Default.Search
+        2 -> Icons.Default.Search
+        else -> Icons.Default.Person
     }
     
     // Gradient Background for the card
@@ -137,7 +144,7 @@ fun OnboardingPage(page: Int) {
             contentAlignment = Alignment.Center
         ) {
             androidx.compose.material3.Icon(
-                imageVector = Icons.Default.LockOpen,
+                imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -162,5 +169,17 @@ fun OnboardingPage(page: Int) {
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
+        
+        if (page == 3) {
+            Spacer(modifier = Modifier.height(32.dp))
+            OutlinedTextField(
+                value = nameValue,
+                onValueChange = onNameChange,
+                label = { Text("Author Name") },
+                placeholder = { Text("e.g. Agent Smith") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
