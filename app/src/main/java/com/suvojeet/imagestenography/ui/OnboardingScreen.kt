@@ -108,9 +108,9 @@ fun OnboardingPage(page: Int) {
     }
     
     val icon = when (page) {
-        0 -> androidx.compose.material.icons.Icons.Default.Lock // Placeholder
-        1 -> androidx.compose.material.icons.Icons.Default.Security
-        else -> androidx.compose.material.icons.Icons.Default.Search
+        0 -> Icons.Default.Lock
+        1 -> Icons.Default.Security
+        else -> Icons.Default.Search
     }
     
     // Gradient Background for the card
@@ -137,7 +137,7 @@ fun OnboardingPage(page: Int) {
             contentAlignment = Alignment.Center
         ) {
             androidx.compose.material3.Icon(
-                imageVector = androidx.compose.material.icons.filled.LockOpen, // Using generic icon
+                imageVector = Icons.Default.LockOpen,
                 contentDescription = null,
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.primary
