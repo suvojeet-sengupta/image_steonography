@@ -2,6 +2,14 @@
 .gradle
 /local.properties
 /.idea/caches
+# Keystore files
+*.keystore
+*.jks
+keystore.properties
+keystore_base64.txt
+
+# Google Services (e.g. APIs or Firebase)
+google-services.json
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
