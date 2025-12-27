@@ -1,7 +1,16 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -22,22 +31,16 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystorePropertiesFile = rootProject.file("keystore.properties")
-            val keystoreProperties = java.util.Properties()
-            if (keystorePropertiesFile.exists()) {
-                keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
-            }
-
-            val keyStorePath = System.getenv("KEYSTORE_PATH") ?: keystoreProperties.getProperty("storeFile")
-            val keyStorePassword = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword")
             val keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties.getProperty("keyAlias")
             val keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProperties.getProperty("keyPassword")
+            val storePassword = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties.getProperty("storePassword")
+            val keyStorePath = System.getenv("KEYSTORE_PATH") ?: keystoreProperties.getProperty("storeFile")
 
-            if (keyStorePath != null && keyStorePassword != null && keyAlias != null && keyPassword != null) {
-                storeFile = if (System.getenv("KEYSTORE_PATH") != null) file(keyStorePath) else rootProject.file(keyStorePath)
-                storePassword = keyStorePassword
+            if (!keyAlias.isNullOrEmpty() && !keyPassword.isNullOrEmpty() && !storePassword.isNullOrEmpty() && !keyStorePath.isNullOrEmpty()) {
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword
+                this.storePassword = storePassword
+                this.storeFile = rootProject.file(keyStorePath)
             }
         }
     }
