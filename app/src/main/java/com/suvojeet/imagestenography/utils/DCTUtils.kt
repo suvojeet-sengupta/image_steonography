@@ -10,16 +10,16 @@ import kotlin.math.sqrt
 object DCTUtils {
 
     private const val N = 8 // Block size 8x8
-    private const val END_MESSAGE_CONSTANT = "$!#" // Short end marker to save space
-
-    // Mid-frequency coefficients to embed in (Zig-Zag order approximate)
-    // Using (5,2) and (4,3) - mid band
-    private val P1 = Pair(5, 2)
-    private val P2 = Pair(4, 3)
+    private const val END_MESSAGE_CONSTANT = "$!#" // Short end marker
     
-    // Persistence alpha - strength of watermark
-    // Higher = more robust but more visible artifacts
-    private const val ALPHA = 20.0 
+    // Improved Robustness Constants
+    private const val ALPHA = 50.0 // Increased from 20 to 50 for stronger watermark
+    private const val REPETITION = 3 // Write each bit 3 times and vote (Majority Rule)
+
+    // Lower-Mid frequency coefficients (Stronger against compression than High-Mid)
+    // (3,2) and (2,3) are good choices
+    private val P1 = Pair(3, 2)
+    private val P2 = Pair(2, 3)
 
     fun encodeMessage(bitmap: Bitmap, message: String): Bitmap? {
         val fullMessage = message + END_MESSAGE_CONSTANT
@@ -28,25 +28,33 @@ object DCTUtils {
         val width = bitmap.width
         val height = bitmap.height
         
-        // Ensure image can hold the message
-        // 1 bit per 8x8 block
-        val maxBits = (width / N) * (height / N)
+        // Capacity Check: (Blocks) / Repetition
+        val totalBlocks = (width / N) * (height / N)
+        val maxBits = totalBlocks / REPETITION
+        
         if (bitArray.size > maxBits) {
-            return null // Message too long for DCT
+            return null
         }
 
         val newBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         
         var bitIndex = 0
+        var repetitionCount = 0
         
+        // Iterate blocks
         for (y in 0 until height step N) {
             for (x in 0 until width step N) {
                 if (bitIndex >= bitArray.size) return newBitmap
                 
-                // Process 8x8 block
                 if (x + N <= width && y + N <= height) {
+                    // Encode the current bit (repeatedly)
                     processBlockEncode(newBitmap, x, y, bitArray[bitIndex])
-                    bitIndex++
+                    
+                    repetitionCount++
+                    if (repetitionCount >= REPETITION) {
+                        repetitionCount = 0
+                        bitIndex++
+                    }
                 }
             }
         }
@@ -58,74 +66,86 @@ object DCTUtils {
         val width = bitmap.width
         val height = bitmap.height
         
-        val bitList = ArrayList<Boolean>()
+        val recoveredBits = ArrayList<Boolean>()
+        var blockVotes = 0 // Count of '1's found in the repetition set
+        var blocksRead = 0
         
         for (y in 0 until height step N) {
             for (x in 0 until width step N) {
                 if (x + N <= width && y + N <= height) {
-                    bitList.add(processBlockDecode(bitmap, x, y))
+                    val bitVal = processBlockDecode(bitmap, x, y)
+                    if (bitVal) blockVotes++
+                    blocksRead++
+
+                    if (blocksRead >= REPETITION) {
+                        // Majority Vote
+                        val limit = REPETITION / 2
+                        recoveredBits.add(blockVotes > limit)
+                        
+                        // Reset for next bit
+                        blockVotes = 0
+                        blocksRead = 0
+                    }
                 }
             }
         }
         
-        return fromBitArray(bitList)
+        return fromBitArray(recoveredBits)
     }
 
     // --- Core DCT Logic ---
 
     private fun processBlockEncode(bitmap: Bitmap, startX: Int, startY: Int, bit: Boolean) {
-        // 1. Extract Blue channel (Y channel in YCbCr is better, but Blue is simplest for robust demo)
-        // Ideally should convert RGB -> YUB and embed in Y
-        // For simplicity and speed in this demo, we embed in Blue component as it's less sensitive.
         val block = Array(N) { DoubleArray(N) }
         
         for (i in 0 until N) {
             for (j in 0 until N) {
                 val pixel = bitmap.getPixel(startX + j, startY + i)
-                block[i][j] = Color.blue(pixel).toDouble() 
+                // Use GREEN channel. Green has highest contribution to Luminance (71%) 
+                // and is less subsampled than Blue.
+                block[i][j] = Color.green(pixel).toDouble() 
             }
         }
 
-        // 2. DCT
+        // DCT
         val dctBlock = applyDCT(block)
 
-        // 3. Embed Logic
-        // If bit is 1, ensure Coeff(P1) > Coeff(P2) + ALPHA
-        // If bit is 0, ensure Coeff(P2) > Coeff(P1) + ALPHA
+        // Embed
         val u1 = P1.first; val v1 = P1.second
         val u2 = P2.first; val v2 = P2.second
         
         val val1 = dctBlock[u1][v1]
         val val2 = dctBlock[u2][v2]
         
+        // Swapping/Adapting logic
         if (bit) {
-            // Encode 1
+            // Encode 1: Ensure val1 > val2 + ALPHA
             if (val1 <= val2 + ALPHA) {
                 val avg = (val1 + val2) / 2
-                dctBlock[u1][v1] = avg + (ALPHA / 2) + 1.0
-                dctBlock[u2][v2] = avg - (ALPHA / 2) - 1.0
+                dctBlock[u1][v1] = avg + (ALPHA / 2) + 2.0 // +2 for safety margin
+                dctBlock[u2][v2] = avg - (ALPHA / 2) - 2.0
             }
         } else {
-            // Encode 0
+            // Encode 0: Ensure val2 > val1 + ALPHA
              if (val2 <= val1 + ALPHA) {
                 val avg = (val1 + val2) / 2
-                dctBlock[u1][v1] = avg - (ALPHA / 2) - 1.0
-                dctBlock[u2][v2] = avg + (ALPHA / 2) + 1.0
+                dctBlock[u1][v1] = avg - (ALPHA / 2) - 2.0
+                dctBlock[u2][v2] = avg + (ALPHA / 2) + 2.0
             }
         }
 
-        // 4. Inverse DCT
+        // Inverse DCT
         val idctBlock = applyIDCT(dctBlock)
 
-        // 5. Replace pixels
+        // Replace pixels
         for (i in 0 until N) {
             for (j in 0 until N) {
                 val pixel = bitmap.getPixel(startX + j, startY + i)
-                var newBlue = idctBlock[i][j].roundToInt()
-                newBlue = newBlue.coerceIn(0, 255)
+                var newGreen = idctBlock[i][j].roundToInt()
+                newGreen = newGreen.coerceIn(0, 255)
                 
-                // Reconstruct ARGB (Keep R and G same, update B)
-                val newPixel = Color.rgb(Color.red(pixel), Color.green(pixel), newBlue)
+                // Keep R and B, update G
+                val newPixel = Color.rgb(Color.red(pixel), newGreen, Color.blue(pixel))
                 bitmap.setPixel(startX + j, startY + i, newPixel)
             }
         }
@@ -137,7 +157,7 @@ object DCTUtils {
         for (i in 0 until N) {
             for (j in 0 until N) {
                 val pixel = bitmap.getPixel(startX + j, startY + i)
-                block[i][j] = Color.blue(pixel).toDouble()
+                block[i][j] = Color.green(pixel).toDouble() // Use GREEN
             }
         }
 
@@ -146,11 +166,8 @@ object DCTUtils {
         val val1 = dctBlock[P1.first][P1.second]
         val val2 = dctBlock[P2.first][P2.second]
         
-        // Returns true (1) if val1 > val2, else false (0)
         return val1 > val2
     }
-
-    // --- Math Helpers ---
 
     private fun applyDCT(matrix: Array<DoubleArray>): Array<DoubleArray> {
         val result = Array(N) { DoubleArray(N) }
@@ -169,7 +186,7 @@ object DCTUtils {
                                cos((2 * y + 1) * v * piN / 2.0)
                     }
                 }
-                result[u][v] = 0.25 * cu * cv * sum // 2/N * cu * cv * sum, where N=8, 2/8 = 0.25
+                result[u][v] = 0.25 * cu * cv * sum
             }
         }
         return result
@@ -219,6 +236,8 @@ object DCTUtils {
             bitCount++
             
             if (bitCount == 8) {
+                if (currentByte == 0) break // Null terminator check if needed (not here)
+                
                 sb.append(currentByte.toChar())
                 currentByte = 0
                 bitCount = 0
@@ -226,8 +245,10 @@ object DCTUtils {
                 if (sb.endsWith(END_MESSAGE_CONSTANT)) {
                     return sb.substring(0, sb.length - END_MESSAGE_CONSTANT.length)
                 }
+                // Safety break for garbage data
+                if (sb.length > 500) return null 
             }
         }
-        return null // End marker not found
+        return null
     }
 }
