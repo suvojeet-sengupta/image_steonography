@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,17 +17,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.suvojeet.imagestenography.utils.SteganographyMethod
 import com.suvojeet.imagestenography.utils.SteganographyUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,12 +53,16 @@ fun DecodeScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Decode Message") },
+                title = { Text("Decode Message", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary
+                )
             )
         }
     ) { padding ->
@@ -64,84 +70,88 @@ fun DecodeScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             
-            Box(
+            // Image Picker Section
+            Text(
+                text = "Select Encoded Image", 
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+            )
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
+                    .height(280.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { 
+                         pickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }
             ) {
-                if (selectedUri != null) {
-                     coil.compose.AsyncImage(
-                         model = selectedUri,
-                         contentDescription = "Selected Image",
-                         contentScale = ContentScale.Crop,
-                         modifier = Modifier.fillMaxSize()
-                     )
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    if (selectedUri != null) {
+                         coil.compose.AsyncImage(
+                             model = selectedUri,
+                             contentDescription = "Selected Image",
+                             contentScale = ContentScale.Crop,
+                             modifier = Modifier.fillMaxSize()
+                         )
+                         Box(
+                             modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.2f))
+                         )
+                         Icon(
                              imageVector = Icons.Default.AddPhotoAlternate,
-                             contentDescription = null,
-                             modifier = Modifier.size(48.dp),
-                             tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text("Select Encoded Image", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                             contentDescription = "Change Image",
+                             tint = Color.White.copy(alpha = 0.8f),
+                             modifier = Modifier.size(48.dp)
+                         )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                 imageVector = Icons.Default.AddPhotoAlternate,
+                                 contentDescription = null,
+                                 modifier = Modifier.size(64.dp),
+                                 tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Tap to pick image", 
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             
             Button(
                 onClick = { 
                     pickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                colors = ButtonDefaults.outlinedButtonColors()
             ) {
-                Text("Pick Image")
+                Text("Change Image")
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Text("Decoding Method:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-
-            var selectedMethod by remember { mutableStateOf(SteganographyMethod.LSB) }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = selectedMethod == SteganographyMethod.LSB,
-                    onClick = { selectedMethod = SteganographyMethod.LSB }
-                )
-                Text("Standard")
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = selectedMethod == SteganographyMethod.DCT,
-                    onClick = { selectedMethod = SteganographyMethod.DCT }
-                )
-                Text("Robust")
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = selectedMethod == SteganographyMethod.DWT_SVD,
-                    onClick = { selectedMethod = SteganographyMethod.DWT_SVD }
-                )
-                Text("Ultra Robust")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+            // Action Button
             Button(
                 onClick = {
                     if (selectedUri == null) {
-                        Toast.makeText(context, "Please select an image", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Please select an image first", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     
@@ -157,10 +167,10 @@ fun DecodeScreen(onBack: () -> Unit) {
 
                             if (bitmap != null) {
                                 val result = withContext(Dispatchers.Default) {
-                                    SteganographyUtils.decodeMessage(bitmap, selectedMethod)
+                                    SteganographyUtils.decodeMessage(bitmap)
                                 }
                                 
-                                decodedMessage = result ?: "No hidden message found using ${selectedMethod.name} method."
+                                decodedMessage = result ?: "No hidden message found."
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -170,32 +180,57 @@ fun DecodeScreen(onBack: () -> Unit) {
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading && selectedUri != null
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                enabled = !isLoading && selectedUri != null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Decoding...")
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp), 
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Decrypting...", style = MaterialTheme.typography.titleMedium)
                 } else {
-                    Text("Decode Message")
+                    Icon(Icons.Default.LockOpen, contentDescription = null) // Unlock icon
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Decrypt Message", style = MaterialTheme.typography.titleMedium)
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
+            // Result Section
             if (decodedMessage != null) {
-                Text("Hidden Message:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Hidden Message Found:", 
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+                )
+                
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     SelectionContainer {
                         Text(
                             text = decodedMessage!!,
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyLarge
+                            modifier = Modifier.padding(24.dp),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium,
+                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.5
+                            ),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }

@@ -3,35 +3,12 @@ package com.suvojeet.imagestenography.utils
 import android.graphics.Bitmap
 import android.graphics.Color
 
-enum class SteganographyMethod {
-    LSB, // Standard, High Capacity, Fragile
-    DCT, // Robust, Low Capacity, Survives compression
-    DWT_SVD // Ultra Robust, Very Low Capacity, Survives Geometric attacks
-}
-
 object SteganographyUtils {
 
     private const val END_MESSAGE_CONSTANT = "$!@#END" 
 
-    fun encodeMessage(bitmap: Bitmap, message: String, method: SteganographyMethod = SteganographyMethod.LSB): Bitmap? {
-        return when (method) {
-            SteganographyMethod.LSB -> encodeLSB(bitmap, message)
-            SteganographyMethod.DCT -> DCTUtils.encodeMessage(bitmap, message)
-            SteganographyMethod.DWT_SVD -> DWTSVDUtils.encodeMessage(bitmap, message)
-        }
-    }
-
-    fun decodeMessage(bitmap: Bitmap, method: SteganographyMethod = SteganographyMethod.LSB): String? {
-        return when (method) {
-            SteganographyMethod.LSB -> decodeLSB(bitmap)
-            SteganographyMethod.DCT -> DCTUtils.decodeMessage(bitmap)
-            SteganographyMethod.DWT_SVD -> DWTSVDUtils.decodeMessage(bitmap)
-        }
-    }
-
-    // --- LSB Implementation (Private) ---
-
-    private fun encodeLSB(bitmap: Bitmap, message: String): Bitmap? {
+    fun encodeMessage(bitmap: Bitmap, message: String): Bitmap? {
+        // LSB implementation directly
         val fullMessage = message + END_MESSAGE_CONSTANT
         val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         
@@ -103,7 +80,7 @@ object SteganographyUtils {
         return mutableBitmap
     }
 
-    private fun decodeLSB(bitmap: Bitmap): String? {
+    fun decodeMessage(bitmap: Bitmap): String? {
         val width = bitmap.width
         val height = bitmap.height
         
@@ -157,6 +134,10 @@ object SteganographyUtils {
         }
         return null 
     }
+
+    // --- LSB Implementation (Private) ---
+
+
 
     private fun getBit(value: Int, position: Int): Int {
         return (value shr position) and 1
