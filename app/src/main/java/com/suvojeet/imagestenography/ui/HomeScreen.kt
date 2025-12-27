@@ -16,7 +16,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun HomeScreen(
     onNavigateToEncode: () -> Unit,
-    onNavigateToDecode: () -> Unit
+    onNavigateToDecode: () -> Unit,
+    onNavigateToScan: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -64,6 +65,15 @@ fun HomeScreen(
             description = "Reveal a hidden message from an image.",
             buttonText = "Start Decoding",
             onClick = onNavigateToDecode
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+
+        ActionCard(
+            title = "Scan Image",
+            description = "Detect if an image has hidden secrets (Steganalysis).",
+            buttonText = "Scan & Detect",
+            onClick = onNavigateToScan
         )
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.suvojeet.imagestenography.ui.DecodeScreen
 import com.suvojeet.imagestenography.ui.EncodeScreen
 import com.suvojeet.imagestenography.ui.HomeScreen
+import com.suvojeet.imagestenography.ui.SteganalysisScreen
 import com.suvojeet.imagestenography.ui.theme.ImageStenographyTheme
 
 class MainActivity : ComponentActivity() {
@@ -32,12 +33,16 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
                         Screen.Home -> HomeScreen(
                             onNavigateToEncode = { currentScreen = Screen.Encode },
-                            onNavigateToDecode = { currentScreen = Screen.Decode }
+                            onNavigateToDecode = { currentScreen = Screen.Decode },
+                            onNavigateToScan = { currentScreen = Screen.Scan }
                         )
                         Screen.Encode -> EncodeScreen(
                             onBack = { currentScreen = Screen.Home }
                         )
                         Screen.Decode -> DecodeScreen(
+                            onBack = { currentScreen = Screen.Home }
+                        )
+                        Screen.Scan -> SteganalysisScreen(
                             onBack = { currentScreen = Screen.Home }
                         )
                     }
@@ -48,5 +53,5 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Home, Encode, Decode
+    Home, Encode, Decode, Scan
 }
