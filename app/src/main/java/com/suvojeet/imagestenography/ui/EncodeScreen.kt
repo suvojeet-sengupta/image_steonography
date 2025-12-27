@@ -297,8 +297,8 @@ fun EncodeScreen(onBack: () -> Unit) {
                         onCheckedChange = { isWatermarkEnabled = it }
                     )
                     Column {
-                        Text("Add Visual Watermark", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                        Text("Stamps '$authorName' on image. Survives screenshots.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Add Invisible Watermark", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        Text("Embeds '$authorName'. Invisible to eye, revealed by Scanner.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -332,7 +332,7 @@ fun EncodeScreen(onBack: () -> Unit) {
                                     // 0. Apply Watermark FIRST (if enabled)
                                     if (isWatermarkEnabled) {
                                        val watermarked = withContext(Dispatchers.Default) {
-                                            com.suvojeet.imagestenography.utils.WatermarkUtils.applyWatermark(bitmap!!, authorName)
+                                            com.suvojeet.imagestenography.utils.WatermarkUtils.applyInvisibleWatermark(bitmap!!, authorName)
                                        }
                                        bitmap = watermarked
                                     }
