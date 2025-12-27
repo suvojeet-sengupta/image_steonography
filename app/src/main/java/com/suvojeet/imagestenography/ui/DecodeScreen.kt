@@ -107,6 +107,27 @@ fun DecodeScreen(onBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            Text("Decoding Method:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+            var selectedMethod by remember { mutableStateOf(SteganographyMethod.LSB) }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedMethod == SteganographyMethod.LSB,
+                    onClick = { selectedMethod = SteganographyMethod.LSB }
+                )
+                Text("Standard")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedMethod == SteganographyMethod.DCT,
+                    onClick = { selectedMethod = SteganographyMethod.DCT }
+                )
+                Text("Robust")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Button(
                 onClick = {
                     if (selectedUri == null) {
@@ -119,16 +140,17 @@ fun DecodeScreen(onBack: () -> Unit) {
                         try {
                             val bitmap = withContext(Dispatchers.IO) {
                                 context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
-                                    BitmapFactory.decodeStream(stream)
+                                    val original = BitmapFactory.decodeStream(stream)
+                                    original.copy(Bitmap.Config.ARGB_8888, true)
                                 }
                             }
 
                             if (bitmap != null) {
                                 val result = withContext(Dispatchers.Default) {
-                                    SteganographyUtils.decodeMessage(bitmap)
+                                    SteganographyUtils.decodeMessage(bitmap, selectedMethod)
                                 }
                                 
-                                decodedMessage = result ?: "No hidden message found or image modified."
+                                decodedMessage = result ?: "No hidden message found using ${selectedMethod.name} method."
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()

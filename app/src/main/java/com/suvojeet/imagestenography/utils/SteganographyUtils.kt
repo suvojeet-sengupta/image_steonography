@@ -3,20 +3,39 @@ package com.suvojeet.imagestenography.utils
 import android.graphics.Bitmap
 import android.graphics.Color
 
+enum class SteganographyMethod {
+    LSB, // Standard, High Capacity, Fragile
+    DCT  // Robust, Low Capacity, Survives compression
+}
+
 object SteganographyUtils {
 
-    private const val END_MESSAGE_CONSTANT = "$!@#END" // Unique terminator to signal end of message
+    private const val END_MESSAGE_CONSTANT = "$!@#END" 
 
-    fun encodeMessage(bitmap: Bitmap, message: String): Bitmap? {
+    fun encodeMessage(bitmap: Bitmap, message: String, method: SteganographyMethod = SteganographyMethod.LSB): Bitmap? {
+        return when (method) {
+            SteganographyMethod.LSB -> encodeLSB(bitmap, message)
+            SteganographyMethod.DCT -> DCTUtils.encodeMessage(bitmap, message)
+        }
+    }
+
+    fun decodeMessage(bitmap: Bitmap, method: SteganographyMethod = SteganographyMethod.LSB): String? {
+        return when (method) {
+            SteganographyMethod.LSB -> decodeLSB(bitmap)
+            SteganographyMethod.DCT -> DCTUtils.decodeMessage(bitmap)
+        }
+    }
+
+    // --- LSB Implementation (Private) ---
+
+    private fun encodeLSB(bitmap: Bitmap, message: String): Bitmap? {
         val fullMessage = message + END_MESSAGE_CONSTANT
         val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         
         val width = mutableBitmap.width
         val height = mutableBitmap.height
         val totalPixels = width * height
-        // We can store 3 bits per pixel (R, G, B)
-        // Check capacity
-        // 8 bits per char
+        
         if (fullMessage.length * 8 > totalPixels * 3) {
             return null // Message too long
         }
@@ -81,7 +100,7 @@ object SteganographyUtils {
         return mutableBitmap
     }
 
-    fun decodeMessage(bitmap: Bitmap): String? {
+    private fun decodeLSB(bitmap: Bitmap): String? {
         val width = bitmap.width
         val height = bitmap.height
         
@@ -133,7 +152,7 @@ object SteganographyUtils {
                 }
             }
         }
-        return null // No Terminator found
+        return null 
     }
 
     private fun getBit(value: Int, position: Int): Int {
@@ -141,7 +160,6 @@ object SteganographyUtils {
     }
 
     private fun embedBit(value: Int, bit: Int): Int {
-        // Clear LSB and set it to 'bit'
         return (value and 0xFE) or bit
     }
 }

@@ -129,6 +129,27 @@ fun EncodeScreen(onBack: () -> Unit) {
                 maxLines = 5
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Encoding Method:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            
+            var selectedMethod by remember { mutableStateOf(SteganographyMethod.LSB) }
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedMethod == SteganographyMethod.LSB,
+                    onClick = { selectedMethod = SteganographyMethod.LSB }
+                )
+                Text("Standard (High Capacity, Fragile)")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedMethod == SteganographyMethod.DCT,
+                    onClick = { selectedMethod = SteganographyMethod.DCT }
+                )
+                Text("Robust (Low Capacity, Survives Compression)")
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
@@ -147,13 +168,15 @@ fun EncodeScreen(onBack: () -> Unit) {
                         try {
                             val bitmap = withContext(Dispatchers.IO) {
                                 context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
-                                    BitmapFactory.decodeStream(stream)
+                                    val original = BitmapFactory.decodeStream(stream)
+                                    // Make sure we have a mutable ARGB copy (though Utils also copies, safer here)
+                                    original.copy(Bitmap.Config.ARGB_8888, true)
                                 }
                             }
 
                             if (bitmap != null) {
                                 val result = withContext(Dispatchers.Default) {
-                                    SteganographyUtils.encodeMessage(bitmap, message)
+                                    SteganographyUtils.encodeMessage(bitmap, message, selectedMethod)
                                 }
                                 
                                 if (result != null) {
@@ -167,7 +190,7 @@ fun EncodeScreen(onBack: () -> Unit) {
                                         Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
                                     }
                                 } else {
-                                    Toast.makeText(context, "Message too long for this image", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Message too long for this image/method", Toast.LENGTH_LONG).show()
                                 }
                             }
                         } catch (e: Exception) {
@@ -200,7 +223,10 @@ fun EncodeScreen(onBack: () -> Unit) {
                     Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Note: The hidden message might be lost if you Resize, Crop, or Compress (JPEG) this image. Keep it as PNG.",
+                        text = if (selectedMethod == SteganographyMethod.LSB) 
+                            "Note: High capacity but fragile. Crop/Resize/JPEG will destroy message."
+                        else 
+                            "Note: Robust against JPEG & minor edits. Very low capacity (short texts). Image quality slightly reduced.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
