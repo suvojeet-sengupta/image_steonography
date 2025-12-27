@@ -18,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -145,6 +147,43 @@ fun DecodeScreen(onBack: () -> Unit) {
                 Text("Change Image")
             }
 
+            
+            // Password Input Section
+            var encryptionPassword by remember { mutableStateOf("") }
+            var isPasswordVisible by remember { mutableStateOf(false) }
+
+            Text(
+                text = "Decryption Password (If needed)", 
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = encryptionPassword,
+                onValueChange = { encryptionPassword = it },
+                label = { Text("Password") },
+                placeholder = { Text("Enter password to unlock") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                trailingIcon = {
+                    val image = if (isPasswordVisible)
+                        Icons.Default.Visibility
+                    else Icons.Default.VisibilityOff
+
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        Icon(imageVector = image, contentDescription = if (isPasswordVisible) "Hide Password" else "Show Password")
+                    }
+                },
+                visualTransformation = if (isPasswordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password)
+            )
+
             Spacer(modifier = Modifier.height(32.dp))
 
             // Action Button
@@ -167,10 +206,40 @@ fun DecodeScreen(onBack: () -> Unit) {
 
                             if (bitmap != null) {
                                 val result = withContext(Dispatchers.Default) {
-                                    SteganographyUtils.decodeMessage(bitmap)
+                                    val rawResult = SteganographyUtils.decodeMessage(bitmap)
+                                    
+                                    // Attempt decryption if password provided
+                                    if (encryptionPassword.isNotEmpty()) {
+                                        val lsbDecrypted = rawResult.lsbMessage?.let { 
+                                            com.suvojeet.imagestenography.utils.CryptoUtils.decrypt(it, encryptionPassword) 
+                                        }
+                                        val dctDecrypted = rawResult.dctMessage?.let { 
+                                            com.suvojeet.imagestenography.utils.CryptoUtils.decrypt(it, encryptionPassword) 
+                                        }
+                                        
+                                        // If decryption worked (not null), use it. 
+                                        // If returned null (wrong pass/not encrypted), keep raw but maybe warn?
+                                        // For simplicity, if decryption fails but password was given, we assume wrong pass and show null or error? 
+                                        // Let's return raw if decryption returns null (so user sees garbage and knows password is wrong)
+                                        // OR we could try to show visual hint.
+                                        
+                                        // Better UX: Return what we got. If it was encrypted, it will look like garbage.
+                                        // If decryption succeeded, it looks like text.
+                                        // Wait, CryptoUtils.decrypt returns NULL on failure.
+                                        
+                                        SteganographyUtils.DecodeResult(
+                                            lsbMessage = lsbDecrypted ?: rawResult.lsbMessage, // Show raw if decrypt fails
+                                            dctMessage = dctDecrypted ?: rawResult.dctMessage
+                                        )
+                                    } else {
+                                        rawResult
+                                    }
                                 }
                                 
                                 decodedMessage = result
+                                
+                                // Optional: Feedback if password was used but decryption failed for both (still garbage)
+                                // Hard to detect "garbage", but if CryptoUtils returned null, it failed.
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()

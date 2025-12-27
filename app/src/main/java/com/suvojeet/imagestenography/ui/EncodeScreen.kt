@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -161,9 +163,46 @@ fun EncodeScreen(onBack: () -> Unit) {
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Password Protection Section
+            var password by remember { mutableStateOf("") }
+            var isPasswordVisible by remember { mutableStateOf(false) }
+
+            Text(
+                text = "Password Protection (Optional)", 
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Secret Password") },
+                placeholder = { Text("Leave empty for no password") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                trailingIcon = {
+                    val image = if (isPasswordVisible)
+                        Icons.Default.Visibility
+                    else Icons.Default.VisibilityOff
+
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        Icon(imageVector = image, contentDescription = if (isPasswordVisible) "Hide Password" else "Show Password")
+                    }
+                },
+                visualTransformation = if (isPasswordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password)
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
-
 
             // Action Buttons
             if (encodedBitmap == null) {
@@ -189,8 +228,23 @@ fun EncodeScreen(onBack: () -> Unit) {
                                 }
 
                                 if (bitmap != null) {
+                                    // Encrypt message if password provided
+                                    val finalMessage = if (password.isNotEmpty()) {
+                                        withContext(Dispatchers.Default) {
+                                            com.suvojeet.imagestenography.utils.CryptoUtils.encrypt(message, password)
+                                        }
+                                    } else {
+                                        message
+                                    }
+                                    
+                                    if (finalMessage == null) {
+                                        Toast.makeText(context, "Encryption failed", Toast.LENGTH_SHORT).show()
+                                        isLoading = false
+                                        return@launch
+                                    }
+
                                     val result = withContext(Dispatchers.Default) {
-                                        SteganographyUtils.encodeMessage(bitmap, message)
+                                        SteganographyUtils.encodeMessage(bitmap, finalMessage)
                                     }
                                     
                                     if (result != null) {
