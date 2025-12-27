@@ -1,5 +1,6 @@
 package com.suvojeet.imagestenography.ui
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
@@ -22,19 +23,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.suvojeet.imagestenography.utils.SteganographyUtils
 import com.suvojeet.imagestenography.utils.SteganographyMethod
+import com.suvojeet.imagestenography.utils.SteganographyUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.graphics.BitmapFactory
-import android.graphics.Bitmap
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
