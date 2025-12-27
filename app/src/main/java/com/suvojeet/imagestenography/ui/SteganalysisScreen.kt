@@ -230,9 +230,13 @@ fun SteganalysisScreen(onBack: () -> Unit) {
             // Result Section
             if (analysisResult != null) {
                  val result = analysisResult!!
-                 val color = if (result.isSuspicious) Color.Red else Color(0xFF4CAF50) // Green
-                 val icon = if (result.isSuspicious) Icons.Default.Warning else Icons.Default.Security
-                 val text = if (result.isSuspicious) "Suspicious / Hidden Data Detected" else "Clean / Low Probability"
+                 val probability = (result.entropy * 100).toInt()
+                 val isHighRisk = result.isSuspicious
+                 
+                 val color = if (isHighRisk) Color(0xFFFF9800) else Color(0xFF4CAF50) // Orange for warning, not Red
+                 val icon = if (isHighRisk) Icons.Default.Warning else Icons.Default.Security
+                 val text = if (isHighRisk) "High Noise Detected" else "Clean Image"
+                 val description = if (isHighRisk) "Could be hidden data OR natural camera noise." else "Low probability of hidden secrets."
                  
                  Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -256,9 +260,16 @@ fun SteganalysisScreen(onBack: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "LSB Entropy Score: ${String.format("%.4f", result.entropy)}",
+                            text = description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Randomness Score: $probability%",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                         
                         Spacer(modifier = Modifier.height(24.dp))

@@ -15,7 +15,7 @@ object SteganalysisUtils {
     // Threshold for LSB Entropy (0.0 to 1.0)
     // Natural images usually have LSB entropy < 0.9 depending on complexity.
     // Encrypted steganography fills LSB with uniform noise -> Entropy ~ 1.0.
-    private const val ENTROPY_THRESHOLD = 0.92
+    private const val ENTROPY_THRESHOLD = 0.99
 
     fun analyzeImage(bitmap: Bitmap): AnalysisResult {
         val width = bitmap.width
