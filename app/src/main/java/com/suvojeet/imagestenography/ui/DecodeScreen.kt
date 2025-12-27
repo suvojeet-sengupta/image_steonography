@@ -128,6 +128,13 @@ fun DecodeScreen(onBack: () -> Unit) {
                 )
                 Text("Robust")
             }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedMethod == SteganographyMethod.DWT_SVD,
+                    onClick = { selectedMethod = SteganographyMethod.DWT_SVD }
+                )
+                Text("Ultra Robust")
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

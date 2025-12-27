@@ -5,7 +5,8 @@ import android.graphics.Color
 
 enum class SteganographyMethod {
     LSB, // Standard, High Capacity, Fragile
-    DCT  // Robust, Low Capacity, Survives compression
+    DCT, // Robust, Low Capacity, Survives compression
+    DWT_SVD // Ultra Robust, Very Low Capacity, Survives Geometric attacks
 }
 
 object SteganographyUtils {
@@ -16,6 +17,7 @@ object SteganographyUtils {
         return when (method) {
             SteganographyMethod.LSB -> encodeLSB(bitmap, message)
             SteganographyMethod.DCT -> DCTUtils.encodeMessage(bitmap, message)
+            SteganographyMethod.DWT_SVD -> DWTSVDUtils.encodeMessage(bitmap, message)
         }
     }
 
@@ -23,6 +25,7 @@ object SteganographyUtils {
         return when (method) {
             SteganographyMethod.LSB -> decodeLSB(bitmap)
             SteganographyMethod.DCT -> DCTUtils.decodeMessage(bitmap)
+            SteganographyMethod.DWT_SVD -> DWTSVDUtils.decodeMessage(bitmap)
         }
     }
 

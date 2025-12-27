@@ -148,7 +148,14 @@ fun EncodeScreen(onBack: () -> Unit) {
                     selected = selectedMethod == SteganographyMethod.DCT,
                     onClick = { selectedMethod = SteganographyMethod.DCT }
                 )
-                Text("Robust (Low Capacity, Survives Compression)")
+                Text("Robust (Survives Compression)")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = selectedMethod == SteganographyMethod.DWT_SVD,
+                    onClick = { selectedMethod = SteganographyMethod.DWT_SVD }
+                )
+                Text("Ultra Robust (Best for Screenshots)")
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -224,10 +231,11 @@ fun EncodeScreen(onBack: () -> Unit) {
                     Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = if (selectedMethod == SteganographyMethod.LSB) 
-                            "Note: High capacity but fragile. Crop/Resize/JPEG will destroy message."
-                        else 
-                            "Note: Robust against JPEG & minor edits. Very low capacity (short texts). Image quality slightly reduced.",
+                        text = when (selectedMethod) {
+                            SteganographyMethod.LSB -> "Note: High capacity but fragile. Crop/Resize/JPEG will destroy message."
+                            SteganographyMethod.DCT -> "Note: Robust against JPEG & minor edits. Short texts only."
+                            SteganographyMethod.DWT_SVD -> "Note: Strongest method. Survives compression & some scaling. Very slow & low capacity."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
