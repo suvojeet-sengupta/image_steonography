@@ -276,6 +276,60 @@ fun DecodeScreen(onBack: () -> Unit) {
             
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Watermark Reveal Section
+            var showWatermarkDialog by remember { mutableStateOf(false) }
+            val watermarkBitmap by produceState<Bitmap?>(initialValue = null, key1 = showWatermarkDialog) {
+                 if (showWatermarkDialog && selectedUri != null) {
+                     withContext(Dispatchers.IO) {
+                         context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
+                            val original = BitmapFactory.decodeStream(stream)
+                            // Convert to Mutable
+                            val mutable = original.copy(Bitmap.Config.ARGB_8888, true)
+                            value = com.suvojeet.imagestenography.utils.WatermarkUtils.revealWatermark(mutable)
+                         }
+                     }
+                 }
+            }
+
+            OutlinedButton(
+                onClick = { if (selectedUri != null) showWatermarkDialog = true else Toast.makeText(context, "Select image first", Toast.LENGTH_SHORT).show() },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Icon(Icons.Default.Visibility, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reveal Invisible Watermark")
+            }
+
+            if (showWatermarkDialog) {
+                AlertDialog(
+                    onDismissRequest = { showWatermarkDialog = false },
+                    title = { Text("Watermark Inspection") },
+                    text = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Enhanced Blue Channel to reveal hidden patterns.", style = MaterialTheme.typography.bodySmall)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            if (watermarkBitmap != null) {
+                                AsyncImage(
+                                    model = watermarkBitmap,
+                                    contentDescription = "Revealed Watermark",
+                                    modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Fit
+                                )
+                            } else {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showWatermarkDialog = false }) { Text("Close") }
+                    }
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+
             // Result Section
             if (decodedMessage != null) {
                 val lsb = decodedMessage!!.lsbMessage
