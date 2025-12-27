@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.suvojeet.imagestenography.ui.DecodeScreen
 import com.suvojeet.imagestenography.ui.EncodeScreen
 import com.suvojeet.imagestenography.ui.HomeScreen
+import com.suvojeet.imagestenography.ui.OnboardingScreen
 import com.suvojeet.imagestenography.ui.SteganalysisScreen
 import com.suvojeet.imagestenography.ui.theme.ImageStenographyTheme
 
@@ -22,15 +23,26 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val isFirstRun = prefs.getBoolean("is_first_run", true)
+        
         setContent {
             ImageStenographyTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var currentScreen by remember { mutableStateOf(Screen.Home) }
+                    // Start at Onboarding if first run, else Home
+                    var currentScreen by remember { mutableStateOf(if (isFirstRun) Screen.Onboarding else Screen.Home) }
 
                     when (currentScreen) {
+                        Screen.Onboarding -> OnboardingScreen(
+                            onFinish = {
+                                prefs.edit().putBoolean("is_first_run", false).apply()
+                                currentScreen = Screen.Home
+                            }
+                        )
                         Screen.Home -> HomeScreen(
                             onNavigateToEncode = { currentScreen = Screen.Encode },
                             onNavigateToDecode = { currentScreen = Screen.Decode },
@@ -53,5 +65,5 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Home, Encode, Decode, Scan
+    Onboarding, Home, Encode, Decode, Scan
 }

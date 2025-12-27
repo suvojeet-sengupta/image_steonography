@@ -28,9 +28,8 @@ object DCTUtils {
         val width = bitmap.width
         val height = bitmap.height
         
-        // Capacity Check: (Blocks) / Repetition
-        val totalBlocks = (width / N) * (height / N)
-        val maxBits = totalBlocks / REPETITION
+        // Capacity Check
+        val maxBits = getMaxBitsCapacity(width, height)
         
         if (bitArray.size > maxBits) {
             return null
@@ -60,6 +59,18 @@ object DCTUtils {
         }
         
         return newBitmap
+    }
+
+    fun getMaxMessageLength(width: Int, height: Int): Int {
+        val maxBits = getMaxBitsCapacity(width, height)
+        // Convert bits to chars (8 bits per char). Subtract overhead for END constant.
+        val maxChars = (maxBits / 8) - END_MESSAGE_CONSTANT.length
+        return if (maxChars < 0) 0 else maxChars
+    }
+    
+    private fun getMaxBitsCapacity(width: Int, height: Int): Int {
+        val totalBlocks = (width / N) * (height / N)
+        return totalBlocks / REPETITION
     }
 
     fun decodeMessage(bitmap: Bitmap): String? {

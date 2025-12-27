@@ -41,6 +41,14 @@ object SteganographyUtils {
         return DecodeResult(lsbResult, dctResult)
     }
 
+    // --- Capability Checks ---
+    fun getMaxLsbCapacity(width: Int, height: Int): Int {
+        val totalPixels = width * height
+        val maxBits = totalPixels * 3 // 3 channels (R, G, B)
+        val maxChars = (maxBits / 8) - END_MESSAGE_CONSTANT.length
+        return if (maxChars < 0) 0 else maxChars
+    }
+
     // --- LSB Implementation (Private) ---
 
     private const val END_MESSAGE_CONSTANT = "$!@#END" 

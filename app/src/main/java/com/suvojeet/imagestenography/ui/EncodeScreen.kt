@@ -163,7 +163,79 @@ fun EncodeScreen(onBack: () -> Unit) {
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
-            
+
+            // Capacity Indicator
+            if (encodedBitmap == null && selectedUri != null) {
+                var dctLimit by remember { mutableIntStateOf(0) }
+                var lsbLimit by remember { mutableIntStateOf(0) }
+                
+                LaunchedEffect(selectedUri) {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
+                            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                            BitmapFactory.decodeStream(stream, null, options)
+                            val w = options.outWidth
+                            val h = options.outHeight
+                            
+                            if (w > 0 && h > 0) {
+                                dctLimit = com.suvojeet.imagestenography.utils.DCTUtils.getMaxMessageLength(w, h)
+                                lsbLimit = SteganographyUtils.getMaxLsbCapacity(w, h)
+                            }
+                        }
+                    }
+                }
+                
+                if (lsbLimit > 0) {
+                    val currentLength = message.length
+                    // DCT Safety (Robustness)
+                    val isDctSafe = currentLength <= dctLimit
+                    val dctProgress = (currentLength.toFloat() / dctLimit.toFloat()).coerceIn(0f, 1f)
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f), RoundedCornerShape(8.dp)).padding(12.dp)) {
+                         Text(
+                            text = "Capacity Usage", 
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        // DCT Bar
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("WhatsApp Safe:", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(80.dp))
+                            LinearProgressIndicator(
+                                progress = dctProgress,
+                                modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                color = if (isDctSafe) Color(0xFF4CAF50) else Color(0xFFFF9800), // Green vs Orange
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("$currentLength / $dctLimit", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                        }
+                        
+                        if (!isDctSafe) {
+                             Spacer(modifier = Modifier.height(4.dp))
+                             Text(
+                                "⚠️ Robustness Limit Exceeded! Message may not survive WhatsApp compression.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFFF9800),
+                                fontSize = 11.sp
+                             )
+                        }
+                        
+                        // LSB info (just text as it's huge)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Max Standard Capacity: $lsbLimit chars", 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
             
             // Password Protection Section
