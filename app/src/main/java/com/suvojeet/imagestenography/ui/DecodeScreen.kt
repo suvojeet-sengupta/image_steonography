@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.suvojeet.imagestenography.utils.SteganographyMethod
 import com.suvojeet.imagestenography.utils.SteganographyUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
