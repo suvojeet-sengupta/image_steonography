@@ -102,21 +102,27 @@ object WatermarkUtils {
 
     private fun drawTiledText(canvas: Canvas, text: String, paint: Paint, width: Int, height: Int) {
         val textWidth = paint.measureText(text)
-        val gap = textWidth * 1.5f
+        val textSize = paint.textSize
+        
+        // Tighter spacing for denser watermark
+        val horizontalGap = textWidth * 1.2f 
+        val verticalGap = textSize * 2.5f
         
         canvas.save()
-        canvas.rotate(-45f, width / 2f, height / 2f)
+        // Rotate around center
+        canvas.rotate(-30f, width / 2f, height / 2f)
         
         val diag = Math.sqrt((width * width + height * height).toDouble()).toFloat()
         
-        var y = -diag / 2
-        while (y < diag * 1.5) {
-            var x = -diag / 2
-            while (x < diag * 1.5) {
+        // Draw loops covering sufficient area to account for rotation
+        var y = -diag
+        while (y < diag) {
+            var x = -diag
+            while (x < diag) {
                 canvas.drawText(text, x, y, paint)
-                x += gap
+                x += horizontalGap
             }
-            y += gap
+            y += verticalGap
         }
         
         canvas.restore()
