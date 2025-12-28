@@ -72,54 +72,32 @@ object WatermarkUtils {
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
         
-        // Simple "Blue Boost" visualization. 
-        // We highlight pixels that have "unusual" blue spikes compared to neighbors?
-        // Or simpler: Just isolate Blue channel and maximize contrast.
-        
-        // Better Strategy: Spatial Differentiator.
-        // But for this simple implementation, let's just map Blue Channel to Grayscale and Histogram Equalize it?
-        // No, the delta is small.
-        
-        // Let's try error level analysis simulation.
-        // Actually, since we know we added +5 to Blue...
-        // We can visualze local blue variance.
-        
         val newPixels = IntArray(width * height)
         
         for (i in pixels.indices) {
-            val pixel = pixels[i]
-            val b = Color.blue(pixel)
+            val p = pixels[i]
+            val r = Color.red(p)
+            val g = Color.green(p)
+            val b = Color.blue(p)
             
-            // Just visualize the Blue channel purely. 
-            // The text (+5) will be slightly brighter than surroundings.
-            // To make it POP, we multiply differences.
+            // Calculate divergence of Blue from the other channels.
+            // Natural grayscale/white colors have R ~= G ~= B. 
+            // The watermark adds +5 to B, creating a divergence.
+            val diff = b - (r + g) / 2
             
-            // Visualization: Isolate Blue
-            newPixels[i] = Color.rgb(0, 0, b)
+            // Amplify the difference. 
+            // Base level 128 (mid-grey).
+            // Scale factor 10 to make the +5 shift visible as +50 intensity change.
+            var valOut = 128 + diff * 10
+            
+            valOut = valOut.coerceIn(0, 255)
+            
+            // Render as Grayscale
+            newPixels[i] = Color.rgb(valOut, valOut, valOut)
         }
         
-        // Apply a high contrast using ColorMatrix
-        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(result)
-        val paint = Paint()
-        
-        // High Contrast Matrix for Blue
-        val contrast = 10f // Super high contrast
-        val scale = 0f
-        
-        val colorMatrix = ColorMatrix(floatArrayOf(
-            0f, 0f, 0f, 0f, 0f,
-            0f, 0f, 0f, 0f, 0f,
-            0f, 0f, contrast, 0f, -128f * contrast, // Boost Blue
-            0f, 0f, 0f, 1f, 0f
-        ))
-        
-        paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
-        output.setPixels(newPixels, 0, width, 0, 0, width, height) // set base pixels
-        
-        canvas.drawBitmap(output, 0f, 0f, paint)
-        
-        return result
+        output.setPixels(newPixels, 0, width, 0, 0, width, height)
+        return output
     }
 
     private fun drawTiledText(canvas: Canvas, text: String, paint: Paint, width: Int, height: Int) {
