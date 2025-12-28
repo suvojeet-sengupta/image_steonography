@@ -227,18 +227,24 @@ object DCTUtils {
     }
 
     private fun toBitArray(cString: String): BooleanArray {
-        val bits = BooleanArray(cString.length * 8)
-        for (i in cString.indices) {
-            val charCode = cString[i].code
+        // Convert to UTF-8 bytes
+        val bytes = cString.toByteArray(Charsets.UTF_8)
+        val bits = BooleanArray(bytes.size * 8)
+        
+        for (i in bytes.indices) {
+            val byteVal = bytes[i].toInt() and 0xFF
             for (j in 0 until 8) {
-                bits[i * 8 + j] = ((charCode shr (7 - j)) and 1) == 1
+                bits[i * 8 + j] = ((byteVal shr (7 - j)) and 1) == 1
             }
         }
         return bits
     }
 
     private fun fromBitArray(bits: ArrayList<Boolean>): String? {
-        val sb = StringBuilder()
+        val baos = java.io.ByteArrayOutputStream()
+        val endBytes = END_MESSAGE_CONSTANT.toByteArray(Charsets.UTF_8)
+        val endLen = endBytes.size
+        
         var currentByte = 0
         var bitCount = 0
         
@@ -247,17 +253,29 @@ object DCTUtils {
             bitCount++
             
             if (bitCount == 8) {
-                if (currentByte == 0) break // Null terminator check if needed (not here)
-                
-                sb.append(currentByte.toChar())
+                baos.write(currentByte)
                 currentByte = 0
                 bitCount = 0
                 
-                if (sb.endsWith(END_MESSAGE_CONSTANT)) {
-                    return sb.substring(0, sb.length - END_MESSAGE_CONSTANT.length)
+                // Check end
+                if (baos.size() >= endLen) {
+                    val allBytes = baos.toByteArray()
+                    // Check last endLen bytes
+                    var match = true
+                    for (k in 0 until endLen) {
+                        if (allBytes[allBytes.size - endLen + k] != endBytes[k]) {
+                            match = false
+                            break
+                        }
+                    }
+                    
+                    if (match) {
+                        return String(allBytes, 0, allBytes.size - endLen, Charsets.UTF_8)
+                    }
                 }
-                // Safety break for garbage data
-                if (sb.length > 500) return null 
+                
+                // Safety break
+                if (baos.size() > 500) return null 
             }
         }
         return null

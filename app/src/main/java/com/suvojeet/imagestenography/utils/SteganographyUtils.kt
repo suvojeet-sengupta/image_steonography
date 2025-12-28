@@ -55,23 +55,29 @@ object SteganographyUtils {
 
     private fun encodeLSB(bitmap: Bitmap, message: String): Bitmap? {
         val fullMessage = message + END_MESSAGE_CONSTANT
+        // Convert to UTF-8 bytes to support Emojis and special chars
+        val messageBytes = fullMessage.toByteArray(Charsets.UTF_8)
+        
         val mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         
         val width = mutableBitmap.width
         val height = mutableBitmap.height
         val totalPixels = width * height
         
-        if (fullMessage.length * 8 > totalPixels * 3) {
+        // Check capacity (bits needed vs available channels)
+        if (messageBytes.size * 8 > totalPixels * 3) {
             return null // Message too long for LSB
         }
 
-        var messageIndex = 0
+        var byteIndex = 0
         var bitIndex = 0
-        var currentAscii = fullMessage[0].code
+        // Helper to get current byte as integer (0-255) to allow bit operations
+        // bytes in Kotlin are signed (-128 to 127), so we use toInt() and mask 0xFF
+        var currentByteVal = messageBytes[0].toInt() and 0xFF
 
         for (y in 0 until height) {
             for (x in 0 until width) {
-                if (messageIndex >= fullMessage.length) {
+                if (byteIndex >= messageBytes.size) {
                     return mutableBitmap
                 }
 
@@ -81,40 +87,40 @@ object SteganographyUtils {
                 var b = Color.blue(pixel)
 
                 // Embed in Red
-                if (messageIndex < fullMessage.length) {
-                    r = embedBit(r, getBit(currentAscii, 7 - bitIndex))
+                if (byteIndex < messageBytes.size) {
+                    r = embedBit(r, getBit(currentByteVal, 7 - bitIndex))
                     bitIndex++
                     if (bitIndex >= 8) {
                         bitIndex = 0
-                        messageIndex++
-                        if (messageIndex < fullMessage.length) {
-                            currentAscii = fullMessage[messageIndex].code
+                        byteIndex++
+                        if (byteIndex < messageBytes.size) {
+                            currentByteVal = messageBytes[byteIndex].toInt() and 0xFF
                         }
                     }
                 }
 
                 // Embed in Green
-                if (messageIndex < fullMessage.length) {
-                    g = embedBit(g, getBit(currentAscii, 7 - bitIndex))
+                if (byteIndex < messageBytes.size) {
+                    g = embedBit(g, getBit(currentByteVal, 7 - bitIndex))
                     bitIndex++
                     if (bitIndex >= 8) {
                         bitIndex = 0
-                        messageIndex++
-                        if (messageIndex < fullMessage.length) {
-                            currentAscii = fullMessage[messageIndex].code
+                        byteIndex++
+                        if (byteIndex < messageBytes.size) {
+                            currentByteVal = messageBytes[byteIndex].toInt() and 0xFF
                         }
                     }
                 }
 
                 // Embed in Blue
-                if (messageIndex < fullMessage.length) {
-                    b = embedBit(b, getBit(currentAscii, 7 - bitIndex))
+                if (byteIndex < messageBytes.size) {
+                    b = embedBit(b, getBit(currentByteVal, 7 - bitIndex))
                     bitIndex++
                     if (bitIndex >= 8) {
                         bitIndex = 0
-                        messageIndex++
-                        if (messageIndex < fullMessage.length) {
-                            currentAscii = fullMessage[messageIndex].code
+                        byteIndex++
+                        if (byteIndex < messageBytes.size) {
+                            currentByteVal = messageBytes[byteIndex].toInt() and 0xFF
                         }
                     }
                 }
@@ -129,7 +135,11 @@ object SteganographyUtils {
         val width = bitmap.width
         val height = bitmap.height
         
-        val sb = StringBuilder()
+        // Use ByteArrayOutputStream to collect raw bytes
+        val baos = java.io.ByteArrayOutputStream()
+        val endBytes = END_MESSAGE_CONSTANT.toByteArray(Charsets.UTF_8)
+        val endLen = endBytes.size
+        
         var currentByte = 0
         var bitIndex = 0
 
@@ -144,9 +154,10 @@ object SteganographyUtils {
                 currentByte = (currentByte shl 1) or (r and 1)
                 bitIndex++
                 if (bitIndex == 8) {
-                    sb.append(currentByte.toChar())
-                    if (sb.endsWith(END_MESSAGE_CONSTANT)) {
-                        return sb.substring(0, sb.length - END_MESSAGE_CONSTANT.length)
+                    baos.write(currentByte)
+                    if (checkEnd(baos, endBytes)) {
+                        val allBytes = baos.toByteArray()
+                        return String(allBytes, 0, allBytes.size - endLen, Charsets.UTF_8)
                     }
                     currentByte = 0
                     bitIndex = 0
@@ -156,9 +167,10 @@ object SteganographyUtils {
                 currentByte = (currentByte shl 1) or (g and 1)
                 bitIndex++
                 if (bitIndex == 8) {
-                    sb.append(currentByte.toChar())
-                    if (sb.endsWith(END_MESSAGE_CONSTANT)) {
-                        return sb.substring(0, sb.length - END_MESSAGE_CONSTANT.length)
+                    baos.write(currentByte)
+                    if (checkEnd(baos, endBytes)) {
+                        val allBytes = baos.toByteArray()
+                        return String(allBytes, 0, allBytes.size - endLen, Charsets.UTF_8)
                     }
                     currentByte = 0
                     bitIndex = 0
@@ -168,9 +180,10 @@ object SteganographyUtils {
                 currentByte = (currentByte shl 1) or (b and 1)
                 bitIndex++
                 if (bitIndex == 8) {
-                    sb.append(currentByte.toChar())
-                    if (sb.endsWith(END_MESSAGE_CONSTANT)) {
-                        return sb.substring(0, sb.length - END_MESSAGE_CONSTANT.length)
+                    baos.write(currentByte)
+                    if (checkEnd(baos, endBytes)) {
+                        val allBytes = baos.toByteArray()
+                        return String(allBytes, 0, allBytes.size - endLen, Charsets.UTF_8)
                     }
                     currentByte = 0
                     bitIndex = 0
@@ -178,6 +191,22 @@ object SteganographyUtils {
             }
         }
         return null 
+    }
+    
+    private fun checkEnd(baos: java.io.ByteArrayOutputStream, endBytes: ByteArray): Boolean {
+        val size = baos.size()
+        if (size < endBytes.size) return false
+        
+        val allBytes = baos.toByteArray() // Inefficient copying every byte? 
+        // Optimized: Just check backing buffer via toByteArray? 
+        // For now, this is safer. Optimizations can be done if slow.
+        
+        // Check last N bytes
+        val start = size - endBytes.size
+        for (i in endBytes.indices) {
+            if (allBytes[start + i] != endBytes[i]) return false
+        }
+        return true
     }
 
     // --- LSB Implementation (Private) ---

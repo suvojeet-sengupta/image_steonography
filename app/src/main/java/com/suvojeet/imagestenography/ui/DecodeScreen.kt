@@ -39,19 +39,19 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DecodeScreen(onBack: () -> Unit) {
+fun DecodeScreen(onBack: () -> Unit, onDecodeSuccess: (String) -> Unit) {
     BackHandler { onBack() }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    var decodedMessage by remember { mutableStateOf<SteganographyUtils.DecodeResult?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var noMessageFound by remember { mutableStateOf(false) }
 
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         selectedUri = uri
-        decodedMessage = null
+        noMessageFound = false
     }
 
     Scaffold(
@@ -197,6 +197,8 @@ fun DecodeScreen(onBack: () -> Unit) {
                     }
                     
                     isLoading = true
+                    noMessageFound = false
+                    
                     scope.launch {
                         try {
                             val bitmap = withContext(Dispatchers.IO) {
@@ -210,38 +212,28 @@ fun DecodeScreen(onBack: () -> Unit) {
                                 val result = withContext(Dispatchers.Default) {
                                     val rawResult = SteganographyUtils.decodeMessage(bitmap)
                                     
-                                    // Attempt decryption if password provided
+                                    var finalLsb = rawResult.lsbMessage
+                                    var finalDct = rawResult.dctMessage
+                                    
+                                    // Attempt decryption
                                     if (encryptionPassword.isNotEmpty()) {
-                                        val lsbDecrypted = rawResult.lsbMessage?.let { 
-                                            com.suvojeet.imagestenography.utils.CryptoUtils.decrypt(it, encryptionPassword) 
-                                        }
-                                        val dctDecrypted = rawResult.dctMessage?.let { 
-                                            com.suvojeet.imagestenography.utils.CryptoUtils.decrypt(it, encryptionPassword) 
-                                        }
-                                        
-                                        // If decryption worked (not null), use it. 
-                                        // If returned null (wrong pass/not encrypted), keep raw but maybe warn?
-                                        // For simplicity, if decryption fails but password was given, we assume wrong pass and show null or error? 
-                                        // Let's return raw if decryption returns null (so user sees garbage and knows password is wrong)
-                                        // OR we could try to show visual hint.
-                                        
-                                        // Better UX: Return what we got. If it was encrypted, it will look like garbage.
-                                        // If decryption succeeded, it looks like text.
-                                        // Wait, CryptoUtils.decrypt returns NULL on failure.
-                                        
-                                        SteganographyUtils.DecodeResult(
-                                            lsbMessage = lsbDecrypted ?: rawResult.lsbMessage, // Show raw if decrypt fails
-                                            dctMessage = dctDecrypted ?: rawResult.dctMessage
-                                        )
-                                    } else {
-                                        rawResult
+                                        if (finalLsb != null) finalLsb = com.suvojeet.imagestenography.utils.CryptoUtils.decrypt(finalLsb!!, encryptionPassword)
+                                        if (finalDct != null) finalDct = com.suvojeet.imagestenography.utils.CryptoUtils.decrypt(finalDct!!, encryptionPassword)
                                     }
+                                    
+                                    // Prefer LSB, then DCT
+                                    if (!finalLsb.isNullOrEmpty()) return@withContext finalLsb
+                                    if (!finalDct.isNullOrEmpty()) return@withContext finalDct
+                                    
+                                    null
                                 }
                                 
-                                decodedMessage = result
-                                
-                                // Optional: Feedback if password was used but decryption failed for both (still garbage)
-                                // Hard to detect "garbage", but if CryptoUtils returned null, it failed.
+                                if (result != null) {
+                                    onDecodeSuccess(result)
+                                } else {
+                                    noMessageFound = true
+                                    Toast.makeText(context, "No hidden message found or wrong password.", Toast.LENGTH_LONG).show()
+                                }
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -332,76 +324,14 @@ fun DecodeScreen(onBack: () -> Unit) {
             
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Result Section
-            if (decodedMessage != null) {
-                val lsb = decodedMessage!!.lsbMessage
-                val dct = decodedMessage!!.dctMessage
-                
-                if (lsb == null && dct == null) {
-                     Text(
-                        text = "No hidden messages found.", 
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
-                } else {
-                     Text(
-                        text = "Hidden Messages Found:", 
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
-                    )
-                    
-                    if (!lsb.isNullOrEmpty()) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "Standard Message (High Quality)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                SelectionContainer {
-                                    Text(
-                                        text = lsb,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    if (!dct.isNullOrEmpty() && dct != lsb) { // Don't show twice if identical (unless verified diff needed)
-                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "WhatsApp Safe Message (Robust)",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                SelectionContainer {
-                                    Text(
-                                        text = dct,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            // Failure Result
+            if (noMessageFound) {
+                 Text(
+                    text = "No hidden messages found.", 
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
         }
     }

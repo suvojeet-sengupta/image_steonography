@@ -17,6 +17,7 @@ import com.suvojeet.imagestenography.ui.DecodeScreen
 import com.suvojeet.imagestenography.ui.EncodeScreen
 import com.suvojeet.imagestenography.ui.HomeScreen
 import com.suvojeet.imagestenography.ui.OnboardingScreen
+import com.suvojeet.imagestenography.ui.SecretMessageScreen
 import com.suvojeet.imagestenography.ui.SteganalysisScreen
 import com.suvojeet.imagestenography.ui.theme.ImageStenographyTheme
 
@@ -36,6 +37,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // Start at Onboarding if first run, else Home
                     var currentScreen by remember { mutableStateOf(if (isFirstRun) Screen.Onboarding else Screen.Home) }
+                    var secretMessageData by remember { mutableStateOf("") }
 
                     Crossfade(targetState = currentScreen, label = "ScreenTransition") { targetScreen ->
                         when (targetScreen) {
@@ -59,7 +61,11 @@ class MainActivity : ComponentActivity() {
                                 onBack = { currentScreen = Screen.Home }
                             )
                             Screen.Decode -> DecodeScreen(
-                                onBack = { currentScreen = Screen.Home }
+                                onBack = { currentScreen = Screen.Home },
+                                onDecodeSuccess = { msg ->
+                                    secretMessageData = msg
+                                    currentScreen = Screen.SecretMessage
+                                }
                             )
                             Screen.Scan -> SteganalysisScreen(
                                 onBack = { currentScreen = Screen.Home }
@@ -70,6 +76,10 @@ class MainActivity : ComponentActivity() {
                             Screen.BatchDecode -> com.suvojeet.imagestenography.ui.BatchDecodeScreen(
                                 onBack = { currentScreen = Screen.Home }
                             )
+                            Screen.SecretMessage -> SecretMessageScreen(
+                                message = secretMessageData,
+                                onBack = { currentScreen = Screen.Decode }
+                            )
                         }
                     }
                 }
@@ -79,5 +89,5 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Onboarding, Home, Encode, Decode, Scan, BatchEncode, BatchDecode
+    Onboarding, Home, Encode, Decode, Scan, BatchEncode, BatchDecode, SecretMessage
 }
