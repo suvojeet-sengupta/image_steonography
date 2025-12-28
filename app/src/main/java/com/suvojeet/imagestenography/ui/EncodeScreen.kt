@@ -206,6 +206,58 @@ fun EncodeScreen(onBack: () -> Unit) {
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password)
                     )
 
+                    // Strength Meter
+                    if (password.isNotEmpty()) {
+                        val strength = calculatePasswordStrength(password)
+                        val color = when (strength) {
+                            0, 1 -> Color(0xFFE57373) // Red (Weak)
+                            2 -> Color(0xFFFFB74D) // Orange (Medium)
+                            3 -> Color(0xFFFFF176) // Yellow (Good)
+                            else -> Color(0xFF81C784) // Green (Strong)
+                        }
+                        val label = when (strength) {
+                            0, 1 -> "Weak"
+                            2 -> "Medium"
+                            3 -> "Good"
+                            else -> "Strong"
+                        }
+                        
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            LinearProgressIndicator(
+                                progress = { (strength + 1) / 5f },
+                                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                                color = color,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Strength: $label", style = MaterialTheme.typography.bodySmall, color = color)
+                                Text(
+                                    text = "Generate Strong", 
+                                    style = MaterialTheme.typography.bodySmall, 
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable {
+                                        password = generateStrongPassword()
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                         Text(
+                            text = "Generate Strong Password", 
+                            style = MaterialTheme.typography.bodySmall, 
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.End).clickable {
+                                password = generateStrongPassword()
+                            }
+                        )
+                    }
+
                     // Watermark
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -385,4 +437,31 @@ fun SuccessView(bitmap: Bitmap, onReset: () -> Unit, onSave: () -> Unit) {
             Text("Encrypt Another")
         }
     }
+}
+
+fun calculatePasswordStrength(password: String): Int {
+    var score = 0
+    if (password.length >= 8) score++
+    if (password.length >= 12) score++
+    if (password.any { it.isDigit() }) score++
+    if (password.any { !it.isLetterOrDigit() }) score++ // Symbol
+    if (password.any { it.isUpperCase() } && password.any { it.isLowerCase() }) score++
+    
+    // Normalize to 0-4 range roughly
+    // Just simple logic: 
+    // <8 = 0
+    // 8 chars = 1
+    // 8 + mixed = 2
+    // 12 + mixed = 3
+    // 12 + mixed + symbols = 4
+    
+    // Let's rely on the accumulative score but clamp it
+    return score.coerceIn(0, 4)
+}
+
+fun generateStrongPassword(): String {
+    val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+    return (1..16)
+        .map { chars.random() }
+        .joinToString("")
 }
