@@ -88,6 +88,7 @@ fun SecretMessageScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(24.dp)
                 ) {
                     Text(

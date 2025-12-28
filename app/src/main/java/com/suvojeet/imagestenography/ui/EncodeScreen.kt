@@ -451,7 +451,10 @@ fun StepCard(step: Int, title: String, content: @Composable () -> Unit) {
 @Composable
 fun SuccessView(bitmap: Bitmap, onReset: () -> Unit, onSave: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {

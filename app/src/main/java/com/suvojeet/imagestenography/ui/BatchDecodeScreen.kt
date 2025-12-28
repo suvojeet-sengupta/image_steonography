@@ -79,6 +79,7 @@ fun BatchDecodeScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -180,11 +181,11 @@ fun BatchDecodeScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             
             // 4. Results List
-            LazyColumn(
+            Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxWidth()
             ) {
-                items(decodeResults) { item ->
+                decodeResults.forEach { item ->
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),

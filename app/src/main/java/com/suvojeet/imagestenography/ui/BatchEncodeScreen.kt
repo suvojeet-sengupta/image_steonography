@@ -76,6 +76,7 @@ fun BatchEncodeScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -199,11 +200,11 @@ fun BatchEncodeScreen(onBack: () -> Unit) {
                 Text("Selected Files:", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                LazyColumn(
+                Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxHeight()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(selectedUris) { uri ->
+                    selectedUris.forEach { uri ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             modifier = Modifier.fillMaxWidth()
