@@ -2,7 +2,9 @@ package com.suvojeet.imagestenography.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,7 +19,9 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     onNavigateToEncode: () -> Unit,
     onNavigateToDecode: () -> Unit,
-    onNavigateToScan: () -> Unit
+    onNavigateToScan: () -> Unit,
+    onNavigateToBatchEncode: () -> Unit,
+    onNavigateToBatchDecode: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -30,10 +34,13 @@ fun HomeScreen(
                     )
                 )
             )
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(androidx.compose.foundation.rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top // Changed to Top to accommodate scrolling
     ) {
+        Spacer(modifier = Modifier.height(32.dp)) // Add top padding manually since Arrangement is Top
+
         Text(
             text = "Steganography",
             style = MaterialTheme.typography.displayMedium,
@@ -49,7 +56,7 @@ fun HomeScreen(
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         ActionCard(
             title = "Encode Message",
@@ -58,7 +65,7 @@ fun HomeScreen(
             onClick = onNavigateToEncode
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         ActionCard(
             title = "Decode Message",
@@ -67,7 +74,7 @@ fun HomeScreen(
             onClick = onNavigateToDecode
         )
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         ActionCard(
             title = "Scan Image",
@@ -75,6 +82,47 @@ fun HomeScreen(
             buttonText = "Scan & Detect",
             onClick = onNavigateToScan
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            text = "Batch Operations",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Batch Encode Card
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                onClick = onNavigateToBatchEncode
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Batch Encode", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Hide one message in multiple images.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            // Batch Decode Card
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                onClick = onNavigateToBatchDecode
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Batch Decode", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Decode secrets from multiple files.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

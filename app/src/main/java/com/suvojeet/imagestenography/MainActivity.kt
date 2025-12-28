@@ -49,7 +49,9 @@ class MainActivity : ComponentActivity() {
                         Screen.Home -> HomeScreen(
                             onNavigateToEncode = { currentScreen = Screen.Encode },
                             onNavigateToDecode = { currentScreen = Screen.Decode },
-                            onNavigateToScan = { currentScreen = Screen.Scan }
+                            onNavigateToScan = { currentScreen = Screen.Scan },
+                            onNavigateToBatchEncode = { currentScreen = Screen.BatchEncode },
+                            onNavigateToBatchDecode = { currentScreen = Screen.BatchDecode }
                         )
                         Screen.Encode -> EncodeScreen(
                             onBack = { currentScreen = Screen.Home }
@@ -60,6 +62,12 @@ class MainActivity : ComponentActivity() {
                         Screen.Scan -> SteganalysisScreen(
                             onBack = { currentScreen = Screen.Home }
                         )
+                        Screen.BatchEncode -> com.suvojeet.imagestenography.ui.BatchEncodeScreen(
+                            onBack = { currentScreen = Screen.Home }
+                        )
+                        Screen.BatchDecode -> com.suvojeet.imagestenography.ui.BatchDecodeScreen(
+                            onBack = { currentScreen = Screen.Home }
+                        )
                     }
                 }
             }
@@ -68,5 +76,5 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Onboarding, Home, Encode, Decode, Scan
+    Onboarding, Home, Encode, Decode, Scan, BatchEncode, BatchDecode
 }
