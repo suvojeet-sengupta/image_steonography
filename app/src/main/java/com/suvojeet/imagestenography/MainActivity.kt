@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,38 +37,40 @@ class MainActivity : ComponentActivity() {
                     // Start at Onboarding if first run, else Home
                     var currentScreen by remember { mutableStateOf(if (isFirstRun) Screen.Onboarding else Screen.Home) }
 
-                    when (currentScreen) {
-                        Screen.Onboarding -> OnboardingScreen(
-                            onFinish = { name ->
-                                prefs.edit()
-                                    .putBoolean("is_first_run", false)
-                                    .putString("author_name", name)
-                                    .apply()
-                                currentScreen = Screen.Home
-                            }
-                        )
-                        Screen.Home -> HomeScreen(
-                            onNavigateToEncode = { currentScreen = Screen.Encode },
-                            onNavigateToDecode = { currentScreen = Screen.Decode },
-                            onNavigateToScan = { currentScreen = Screen.Scan },
-                            onNavigateToBatchEncode = { currentScreen = Screen.BatchEncode },
-                            onNavigateToBatchDecode = { currentScreen = Screen.BatchDecode }
-                        )
-                        Screen.Encode -> EncodeScreen(
-                            onBack = { currentScreen = Screen.Home }
-                        )
-                        Screen.Decode -> DecodeScreen(
-                            onBack = { currentScreen = Screen.Home }
-                        )
-                        Screen.Scan -> SteganalysisScreen(
-                            onBack = { currentScreen = Screen.Home }
-                        )
-                        Screen.BatchEncode -> com.suvojeet.imagestenography.ui.BatchEncodeScreen(
-                            onBack = { currentScreen = Screen.Home }
-                        )
-                        Screen.BatchDecode -> com.suvojeet.imagestenography.ui.BatchDecodeScreen(
-                            onBack = { currentScreen = Screen.Home }
-                        )
+                    Crossfade(targetState = currentScreen, label = "ScreenTransition") { targetScreen ->
+                        when (targetScreen) {
+                            Screen.Onboarding -> OnboardingScreen(
+                                onFinish = { name ->
+                                    prefs.edit()
+                                        .putBoolean("is_first_run", false)
+                                        .putString("author_name", name)
+                                        .apply()
+                                    currentScreen = Screen.Home
+                                }
+                            )
+                            Screen.Home -> HomeScreen(
+                                onNavigateToEncode = { currentScreen = Screen.Encode },
+                                onNavigateToDecode = { currentScreen = Screen.Decode },
+                                onNavigateToScan = { currentScreen = Screen.Scan },
+                                onNavigateToBatchEncode = { currentScreen = Screen.BatchEncode },
+                                onNavigateToBatchDecode = { currentScreen = Screen.BatchDecode }
+                            )
+                            Screen.Encode -> EncodeScreen(
+                                onBack = { currentScreen = Screen.Home }
+                            )
+                            Screen.Decode -> DecodeScreen(
+                                onBack = { currentScreen = Screen.Home }
+                            )
+                            Screen.Scan -> SteganalysisScreen(
+                                onBack = { currentScreen = Screen.Home }
+                            )
+                            Screen.BatchEncode -> com.suvojeet.imagestenography.ui.BatchEncodeScreen(
+                                onBack = { currentScreen = Screen.Home }
+                            )
+                            Screen.BatchDecode -> com.suvojeet.imagestenography.ui.BatchDecodeScreen(
+                                onBack = { currentScreen = Screen.Home }
+                            )
+                        }
                     }
                 }
             }
