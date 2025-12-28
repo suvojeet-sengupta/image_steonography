@@ -60,6 +60,10 @@ fun EncodeScreen(onBack: () -> Unit) {
     var isWatermarkEnabled by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(false) }
     var encodedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    
+    // Capacity State
+    var dctLimit by remember { mutableIntStateOf(0) }
+    var lsbLimit by remember { mutableIntStateOf(0) }
 
     val authorName = remember { 
         context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
@@ -71,6 +75,28 @@ fun EncodeScreen(onBack: () -> Unit) {
     ) { uri: Uri? ->
         selectedUri = uri
         encodedBitmap = null
+    }
+    
+    // Calculate Capacity
+    LaunchedEffect(selectedUri) {
+        if (selectedUri != null) {
+            withContext(Dispatchers.IO) {
+                context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
+                    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeStream(stream, null, options)
+                    val w = options.outWidth
+                    val h = options.outHeight
+                    
+                    if (w > 0 && h > 0) {
+                        dctLimit = com.suvojeet.imagestenography.utils.DCTUtils.getMaxMessageLength(w, h)
+                        lsbLimit = SteganographyUtils.getMaxLsbCapacity(w, h)
+                    }
+                }
+            }
+        } else {
+            dctLimit = 0
+            lsbLimit = 0
+        }
     }
 
     Scaffold(
@@ -177,10 +203,45 @@ fun EncodeScreen(onBack: () -> Unit) {
                     )
                 )
                 
-                // Capacity Logic (Simplified for visual)
-                if (selectedUri != null && message.isNotEmpty()) {
+                // Capacity Logic
+                if (dctLimit > 0) {
+                     val currentLength = message.length
+                     val isDctSafe = currentLength <= dctLimit
+                     val dctProgress = (currentLength.toFloat() / dctLimit.toFloat()).coerceIn(0f, 1f)
+                     
+                     Spacer(modifier = Modifier.height(12.dp))
+                     
+                     Text("Storage Capacity", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                     Spacer(modifier = Modifier.height(4.dp))
+                     
+                     Row(verticalAlignment = Alignment.CenterVertically) {
+                         Text("Robust:", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(50.dp))
+                         LinearProgressIndicator(
+                             progress = { dctProgress },
+                             modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)),
+                             color = if (isDctSafe) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                             trackColor = MaterialTheme.colorScheme.surfaceVariant
+                         )
+                         Spacer(modifier = Modifier.width(8.dp))
+                         Text("$currentLength / $dctLimit", style = MaterialTheme.typography.labelSmall)
+                     }
+                     
+                     if (!isDctSafe) {
+                          Text(
+                             "⚠️ Exceeds robust limit. May not survive compression.",
+                             style = MaterialTheme.typography.bodySmall,
+                             color = Color(0xFFFF9800),
+                             fontSize = 11.sp,
+                             modifier = Modifier.padding(top = 4.dp)
+                          )
+                     }
+                     
+                     Spacer(modifier = Modifier.height(4.dp))
+                     Text("Max (Standard): $lsbLimit chars", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                } else if (selectedUri != null) {
+                    // Loading or error calculating
                      Spacer(modifier = Modifier.height(8.dp))
-                     Text("Capacity check runs on encoding...", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                     Text("Calculating capacity...", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                 }
             }
 
