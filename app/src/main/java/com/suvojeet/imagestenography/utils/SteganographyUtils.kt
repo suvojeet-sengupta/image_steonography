@@ -12,44 +12,32 @@ object SteganographyUtils {
         val dctMessage: String?
     )
 
-    fun encodeMessage(bitmap: Bitmap, message: String, onProgress: ((Float) -> Unit)? = null): Bitmap? {
+    fun encodeMessage(bitmap: Bitmap, message: String): Bitmap? {
         // 1. First try DCT (Robust)
+        // We copy the bitmap for DCT
         var workingBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         
-        // Notify start
-        onProgress?.invoke(0f)
-        
-        // Try to encode with DCT. (Skipping detailed progress for DCT for now, assume fast or minimal impact on bar)
+        // Try to encode with DCT. If message is too long or fails, we just ignore DCT and proceed with LSB
+        // keeping the original (or whatever state) for LSB encoding.
+        // For strict robustness, we should ideally warn, but for "Hybrid", we just do best effort.
         val dctBitmap = DCTUtils.encodeMessage(workingBitmap, message)
         
         if (dctBitmap != null) {
-             workingBitmap = dctBitmap 
+             workingBitmap = dctBitmap // DCT encoding successful
         }
+
+        // 2. Then apply LSB (Standard) on the potentially DCT-modified bitmap
+        // This ensures the image has high-quality LSB message, and underlying robust DCT noise.
+        val finalBitmap = encodeLSB(workingBitmap, message)
         
-        // 2. Then apply LSB (Standard)
-        // We'll map LSB progress to 0.1 -> 1.0 (assuming DCT took 10%)
-        val finalBitmap = encodeLSB(workingBitmap, message) { progress ->
-            onProgress?.invoke(0.1f + (progress * 0.9f))
-        }
-        
-        onProgress?.invoke(1f)
         return finalBitmap
     }
 
-    fun decodeMessage(bitmap: Bitmap, onProgress: ((Float) -> Unit)? = null): DecodeResult {
-        onProgress?.invoke(0f)
-        
+    fun decodeMessage(bitmap: Bitmap): DecodeResult {
         // Attempt to decode using both methods
-        // LSB takes first 50%
-        val lsbResult = decodeLSB(bitmap) { p ->
-            onProgress?.invoke(p * 0.5f)
-        }
-        
-        // DCT takes next 50%
-        // (Assuming DCT decode is fast enough or we just jump to 100%)
+        val lsbResult = decodeLSB(bitmap)
         val dctResult = DCTUtils.decodeMessage(bitmap)
         
-        onProgress?.invoke(1f)
         return DecodeResult(lsbResult, dctResult)
     }
 
@@ -65,7 +53,7 @@ object SteganographyUtils {
 
     private const val END_MESSAGE_CONSTANT = "$!@#END" 
 
-    private fun encodeLSB(bitmap: Bitmap, message: String, onProgress: ((Float) -> Unit)? = null): Bitmap? {
+    private fun encodeLSB(bitmap: Bitmap, message: String): Bitmap? {
         val fullMessage = message + END_MESSAGE_CONSTANT
         // Convert to UTF-8 bytes to support Emojis and special chars
         val messageBytes = fullMessage.toByteArray(Charsets.UTF_8)
@@ -83,12 +71,11 @@ object SteganographyUtils {
 
         var byteIndex = 0
         var bitIndex = 0
+        // Helper to get current byte as integer (0-255) to allow bit operations
+        // bytes in Kotlin are signed (-128 to 127), so we use toInt() and mask 0xFF
         var currentByteVal = messageBytes[0].toInt() and 0xFF
 
         for (y in 0 until height) {
-            // Report progress per row
-            onProgress?.invoke(y.toFloat() / height)
-            
             for (x in 0 until width) {
                 if (byteIndex >= messageBytes.size) {
                     return mutableBitmap
@@ -144,7 +131,7 @@ object SteganographyUtils {
         return mutableBitmap
     }
 
-    private fun decodeLSB(bitmap: Bitmap, onProgress: ((Float) -> Unit)? = null): String? {
+    private fun decodeLSB(bitmap: Bitmap): String? {
         val width = bitmap.width
         val height = bitmap.height
         
@@ -157,9 +144,6 @@ object SteganographyUtils {
         var bitIndex = 0
 
         for (y in 0 until height) {
-            // Report progress per row
-            onProgress?.invoke(y.toFloat() / height)
-            
             for (x in 0 until width) {
                 val pixel = bitmap.getPixel(x, y)
                 val r = Color.red(pixel)

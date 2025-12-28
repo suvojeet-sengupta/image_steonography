@@ -45,7 +45,6 @@ fun DecodeScreen(onBack: () -> Unit, onDecodeSuccess: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
     var isLoading by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
     var noMessageFound by remember { mutableStateOf(false) }
 
     val pickerLauncher = rememberLauncherForActivityResult(
@@ -198,7 +197,6 @@ fun DecodeScreen(onBack: () -> Unit, onDecodeSuccess: (String) -> Unit) {
                     }
                     
                     isLoading = true
-                    progress = 0f
                     noMessageFound = false
                     
                     scope.launch {
@@ -212,9 +210,7 @@ fun DecodeScreen(onBack: () -> Unit, onDecodeSuccess: (String) -> Unit) {
 
                             if (bitmap != null) {
                                 val result = withContext(Dispatchers.Default) {
-                                    val rawResult = SteganographyUtils.decodeMessage(bitmap) { p ->
-                                        progress = p
-                                    }
+                                    val rawResult = SteganographyUtils.decodeMessage(bitmap)
                                     
                                     var finalLsb = rawResult.lsbMessage
                                     var finalDct = rawResult.dctMessage
@@ -258,16 +254,13 @@ fun DecodeScreen(onBack: () -> Unit, onDecodeSuccess: (String) -> Unit) {
                 )
             ) {
                 if (isLoading) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.size(24.dp), 
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Decoding ${(progress * 100).toInt()}%", style = MaterialTheme.typography.titleMedium)
-                    }
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp), 
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Decrypting...", style = MaterialTheme.typography.titleMedium)
                 } else {
                     Icon(Icons.Default.LockOpen, contentDescription = null) // Unlock icon
                     Spacer(modifier = Modifier.width(8.dp))

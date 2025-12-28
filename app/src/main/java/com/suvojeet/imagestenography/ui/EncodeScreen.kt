@@ -59,7 +59,6 @@ fun EncodeScreen(onBack: () -> Unit) {
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isWatermarkEnabled by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
     var encodedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     
     // Capacity State
@@ -352,80 +351,71 @@ fun EncodeScreen(onBack: () -> Unit) {
                          return@Button
                     }
                     
-                                            isLoading = true
-                                            progress = 0f
-                                            scope.launch {
-                                                try {
-                                                    var bitmap = withContext(Dispatchers.IO) {
-                                                        context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
-                                                            val original = BitmapFactory.decodeStream(stream)
-                                                            original.copy(Bitmap.Config.ARGB_8888, true)
-                                                        }
-                                                    }
-                    
-                                                    if (bitmap != null) {
-                                                        // Watermark
-                                                        if (isWatermarkEnabled) {
-                                                           bitmap = withContext(Dispatchers.Default) {
-                                                                com.suvojeet.imagestenography.utils.WatermarkUtils.applyInvisibleWatermark(bitmap!!, authorName)
-                                                           }
-                                                        }
-                                                        
-                                                        // Encrypt
-                                                        val finalMessage = if (password.isNotEmpty()) {
-                                                            withContext(Dispatchers.Default) {
-                                                                com.suvojeet.imagestenography.utils.CryptoUtils.encrypt(message, password)
-                                                            }
-                                                        } else {
-                                                            message
-                                                        }
-                                                        
-                                                        if (finalMessage == null) {
-                                                            Toast.makeText(context, "Encryption failed", Toast.LENGTH_SHORT).show()
-                                                            isLoading = false
-                                                            return@launch
-                                                        }
-                    
-                                                        val result = withContext(Dispatchers.Default) {
-                                                            SteganographyUtils.encodeMessage(bitmap!!, finalMessage) { p ->
-                                                                progress = p
-                                                            }
-                                                        }
-                                                        
-                                                        if (result != null) {
-                                                            encodedBitmap = result
-                                                        } else {
-                                                            Toast.makeText(context, "Message too long for this image", Toast.LENGTH_LONG).show()
-                                                        }
-                                                    }
-                                                } catch (e: Exception) {
-                                                    e.printStackTrace()
-                                                } finally {
-                                                    isLoading = false
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                                        shape = RoundedCornerShape(16.dp),
-                                        enabled = !isLoading
-                                    ) {
-                                         if (isLoading) {
-                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                 CircularProgressIndicator(
-                                                     progress = { progress },
-                                                     modifier = Modifier.size(24.dp), 
-                                                     color = MaterialTheme.colorScheme.onPrimary,
-                                                     strokeWidth = 3.dp,
-                                                 )
-                                                 Spacer(modifier = Modifier.width(12.dp))
-                                                 Text("Encrypting ${(progress * 100).toInt()}%")
-                                             }
-                                         } else {
-                                             Icon(Icons.Default.Lock, contentDescription = null)
-                                             Spacer(modifier = Modifier.width(8.dp))
-                                             Text("Encrypt & Hide")
-                                         }
-                                    }            
+                    isLoading = true
+                    scope.launch {
+                        try {
+                            var bitmap = withContext(Dispatchers.IO) {
+                                context.contentResolver.openInputStream(selectedUri!!)?.use { stream ->
+                                    val original = BitmapFactory.decodeStream(stream)
+                                    original.copy(Bitmap.Config.ARGB_8888, true)
+                                }
+                            }
+
+                            if (bitmap != null) {
+                                // Watermark
+                                if (isWatermarkEnabled) {
+                                   bitmap = withContext(Dispatchers.Default) {
+                                        com.suvojeet.imagestenography.utils.WatermarkUtils.applyInvisibleWatermark(bitmap!!, authorName)
+                                   }
+                                }
+                                
+                                // Encrypt
+                                val finalMessage = if (password.isNotEmpty()) {
+                                    withContext(Dispatchers.Default) {
+                                        com.suvojeet.imagestenography.utils.CryptoUtils.encrypt(message, password)
+                                    }
+                                } else {
+                                    message
+                                }
+                                
+                                if (finalMessage == null) {
+                                    Toast.makeText(context, "Encryption failed", Toast.LENGTH_SHORT).show()
+                                    isLoading = false
+                                    return@launch
+                                }
+
+                                val result = withContext(Dispatchers.Default) {
+                                    SteganographyUtils.encodeMessage(bitmap!!, finalMessage)
+                                }
+                                
+                                if (result != null) {
+                                    encodedBitmap = result
+                                } else {
+                                    Toast.makeText(context, "Message too long for this image", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                enabled = !isLoading
+            ) {
+                 if (isLoading) {
+                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                     Spacer(modifier = Modifier.width(12.dp))
+                     Text("Encrypting...")
+                 } else {
+                     Icon(Icons.Default.Lock, contentDescription = null)
+                     Spacer(modifier = Modifier.width(8.dp))
+                     Text("Encrypt & Hide")
+                 }
+            }
+            
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
