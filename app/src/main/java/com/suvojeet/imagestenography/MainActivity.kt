@@ -18,6 +18,7 @@ import com.suvojeet.imagestenography.ui.EncodeScreen
 import com.suvojeet.imagestenography.ui.HomeScreen
 import com.suvojeet.imagestenography.ui.OnboardingScreen
 import com.suvojeet.imagestenography.ui.SecretMessageScreen
+import com.suvojeet.imagestenography.ui.SettingsScreen
 import com.suvojeet.imagestenography.ui.SteganalysisScreen
 import com.suvojeet.imagestenography.ui.theme.ImageStenographyTheme
 
@@ -55,7 +56,8 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToDecode = { currentScreen = Screen.Decode },
                                 onNavigateToScan = { currentScreen = Screen.Scan },
                                 onNavigateToBatchEncode = { currentScreen = Screen.BatchEncode },
-                                onNavigateToBatchDecode = { currentScreen = Screen.BatchDecode }
+                                onNavigateToBatchDecode = { currentScreen = Screen.BatchDecode },
+                                onNavigateToSettings = { currentScreen = Screen.Settings }
                             )
                             Screen.Encode -> EncodeScreen(
                                 onBack = { currentScreen = Screen.Home }
@@ -80,6 +82,9 @@ class MainActivity : ComponentActivity() {
                                 message = secretMessageData,
                                 onBack = { currentScreen = Screen.Decode }
                             )
+                            Screen.Settings -> SettingsScreen(
+                                onBack = { currentScreen = Screen.Home }
+                            )
                         }
                     }
                 }
@@ -89,5 +94,5 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Onboarding, Home, Encode, Decode, Scan, BatchEncode, BatchDecode, SecretMessage
+    Onboarding, Home, Encode, Decode, Scan, BatchEncode, BatchDecode, SecretMessage, Settings
 }
