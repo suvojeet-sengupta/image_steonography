@@ -453,7 +453,6 @@ fun SuccessView(bitmap: Bitmap, onReset: () -> Unit, onSave: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
