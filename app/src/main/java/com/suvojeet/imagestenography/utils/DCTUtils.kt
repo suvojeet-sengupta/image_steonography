@@ -13,12 +13,13 @@ object DCTUtils {
     private const val END_MESSAGE_CONSTANT = "$!#"
     
     // Robustness Constants
-    private const val ALPHA = 50.0 
-    private const val REPETITION = 3 
+    private const val ALPHA = 70.0 
+    private const val REPETITION = 5 
 
-    // Coefficients for embedding (Mid-frequency)
-    private val P1 = Pair(3, 2)
-    private val P2 = Pair(2, 3)
+    // Coefficients for embedding (Lower-frequency for WhatsApp survival)
+    // (2,1) and (1,2) are preserved better than (3,2)/(2,3) during JPEG compression
+    private val P1 = Pair(2, 1)
+    private val P2 = Pair(1, 2)
 
     // Precomputed DCT Matrix T and its Transpose Tt
     // DCT = T * Block * Tt
