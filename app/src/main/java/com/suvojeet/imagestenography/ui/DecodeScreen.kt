@@ -324,6 +324,26 @@ fun DecodeScreen(onBack: () -> Unit, onDecodeSuccess: (String) -> Unit) {
                         }
                     },
                     confirmButton = {
+                        TextButton(
+                            onClick = {
+                                if (watermarkBitmap != null) {
+                                    scope.launch {
+                                        val uri = com.suvojeet.imagestenography.utils.ImageUtils.saveBitmapToGallery(
+                                            context,
+                                            watermarkBitmap!!,
+                                            "Revealed_Watermark_${System.currentTimeMillis()}"
+                                        )
+                                        if (uri != null) {
+                                            Toast.makeText(context, "Saved to Gallery", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed to save", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            }
+                        ) { Text("Save") }
+                    },
+                    dismissButton = {
                         TextButton(onClick = { showWatermarkDialog = false }) { Text("Close") }
                     }
                 )
